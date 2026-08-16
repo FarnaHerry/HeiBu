@@ -4,14 +4,63 @@
 #include <eui_neo.h>
 
 #include "app_state.h"
+#include "db/csv.h"
 #include "db/driver_factory.h"
 #include "db/grid_utils.h"
 #include "db/sql_builder.h"
 #include "store/connections.h"
+#include "store/save_dialog.h"
 
 #include <algorithm>
+#include <fstream>
 
 namespace heibu {
+
+// 弹出全局 toast 反馈。
+inline void showToast(const std::string& title, const std::string& message) {
+    S().toastTitle = title;
+    S().toastMessage = message;
+    S().toastVisible = true;
+    app::requestUpdate();
+}
+
+// 导出当前活动标签的结果网格为 CSV。
+inline void exportCsv() {
+    AppState& s = S();
+    if (!s.activeTabId) {
+        return;
+    }
+    auto it = s.tabs.find(*s.activeTabId);
+    if (it == s.tabs.end() || !it->second.result) {
+        showToast("导出", "没有可导出的结果");
+        return;
+    }
+    const ResultGrid& grid = *it->second.result;
+    if (grid.columns.empty() && grid.rows.empty()) {
+        showToast("导出", "结果为空");
+        return;
+    }
+    // 默认文件名：标签标题 + .csv，非法字符替换为 _
+    std::string defaultName = it->second.title + ".csv";
+    for (char& ch : defaultName) {
+        if (ch == ':' || ch == '/' || ch == '\\' || ch == '*' || ch == '?' ||
+            ch == '"' || ch == '<' || ch == '>' || ch == '|') {
+            ch = '_';
+        }
+    }
+    const std::string path = saveFileDialog("导出 CSV", "CSV 文件", "csv", defaultName);
+    if (path.empty()) {
+        return;   // 用户取消
+    }
+    const std::string csv = resultToCsv(grid);
+    std::ofstream out(path, std::ios::binary);
+    if (!out) {
+        showToast("导出失败", "无法写入: " + path);
+        return;
+    }
+    out << csv;
+    showToast("导出成功", std::to_string(grid.rows.size()) + " 行已保存到 " + path);
+}
 
 inline constexpr std::int64_t kRowCap = 50000;
 

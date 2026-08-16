@@ -177,6 +177,13 @@ inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, 
             app::requestUpdate();
         })
         .build();
+
+    // 导出当前页 CSV
+    components::button(ui, "page.export." + tabId)
+        .position(sx - 84.0f, y + 4.0f).size(80.0f, 24.0f)
+        .text("导出 CSV").fontSize(11.0f).theme(t, false)
+        .onClick([] { heibu::exportCsv(); })
+        .build();
 }
 
 // 结果区：running / 错误 / DML 影响行数 / 空 / 网格。
@@ -233,6 +240,11 @@ inline void composeQueryTab(eui::Ui& ui, const Tab& tab, float x, float y, float
         .position(x + 12.0f, y + 5.0f).size(72.0f, 26.0f)
         .text(std::string(L(StrId::Run))).fontSize(13.0f).theme(t, true)
         .onClick([tabId = tab.id] { heibu::runQueryTab(tabId); })
+        .build();
+    components::button(ui, "export." + tab.id)
+        .position(x + 92.0f, y + 5.0f).size(72.0f, 26.0f)
+        .text("导出 CSV").fontSize(12.0f).theme(t, false)
+        .onClick([] { heibu::exportCsv(); })
         .build();
 
     composeEditor(ui, tab, x, y + toolbarH, w, editorH, t);
@@ -594,6 +606,21 @@ inline void composeTabContextMenu(eui::Ui& ui, float w, float h,
         .build();
 }
 
+// 全局 toast：右下角弹出，3 秒自动消失（导出成功/失败等反馈）。
+inline void composeToast(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
+    components::toast(ui, "app.toast")
+        .visible(S().toastVisible)
+        .screen(w, h)
+        .size(360.0f, 64.0f)
+        .title(S().toastTitle)
+        .message(S().toastMessage)
+        .theme(t)
+        .zIndex(120)
+        .duration(3.0f)
+        .onDismiss([] { S().toastVisible = false; })
+        .build();
+}
+
 inline void composeShell(eui::Ui& ui, const eui::Screen& screen) {
     syncTheme();   // 跟随系统时同步 OS 深色（轮询线程唤醒后触发重排再读）
     const components::theme::ThemeColorTokens t = currentTheme();
@@ -612,6 +639,7 @@ inline void composeShell(eui::Ui& ui, const eui::Screen& screen) {
     composeContextMenu(ui, w, h, t);
     composePageSizeMenu(ui, w, h, t);
     composeTabContextMenu(ui, w, h, t);
+    composeToast(ui, w, h, t);
 }
 
 } // namespace heibu::ui

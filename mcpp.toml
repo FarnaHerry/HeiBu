@@ -21,3 +21,5 @@ include_dirs = ["src"]
 # 加速编译（mcpp 2026.8.15.x）：模块 BMI 一发布 import 它的编译单元就并行启动，
 # 不必等整个模块编译完。C++23 模块项目收益明显。
 bmi_schedule = "on"
+# GetSaveFileNameW 在 comdlg32.dll（src/store/save_dialog.h）。
+ldflags = ["-lcomdlg32"]

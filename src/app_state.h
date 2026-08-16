@@ -91,6 +91,11 @@ struct AppState {
     float sidebarScrollY = 0.0f;               // 侧边栏卷宗列表滚动偏移
     float tabScrollX = 0.0f;                   // 标签条横向滚动偏移
 
+    // 全局 toast（导出/错误反馈）
+    bool toastVisible = false;
+    std::string toastTitle;
+    std::string toastMessage;
+
     // 侧边栏右键菜单
     bool ctxMenuOpen = false;
     float ctxX = 0.0f;
