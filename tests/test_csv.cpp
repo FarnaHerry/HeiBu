@@ -1,6 +1,6 @@
 // 黑簿 CSV 导出测试 — 序列化纯函数。
-#include "db/csv.h"
-#include "db/types.h"
+import heibu.db.csv;
+import heibu.db.types;
 
 #include <cassert>
 #include <string>

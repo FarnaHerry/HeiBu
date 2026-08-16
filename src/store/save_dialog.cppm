@@ -1,13 +1,12 @@
-#pragma once
 // 黑簿 原生「另存为」对话框 + UTF-8 路径写文件 — 仅 Windows。
 // eui-neo 只提供打开对话框（openFileDialog），保存路径需自取。
 //
 // ⚠️ 不要在 Windows 上用 std::ofstream(char* 路径) 写含中文的文件名：C 运行时的
 // fopen 系列把 char* 当 ANSI/GBK 解释，UTF-8 中文路径会乱码。写文件必须走宽字符
-// API（_wfopen / CreateFileW）。
+// API（_wfopen_s / CreateFileW）。
+module;
+// FILE / fwrite / fclose / _wfopen_s 是 C 库，不在 std 模块里，必须经 global fragment 引入。
 #include <cstdio>
-#include <string>
-
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -19,7 +18,10 @@
 #include <commdlg.h>
 #endif
 
-namespace heibu {
+export module heibu.store.save_dialog;
+import std;
+
+export namespace heibu {
 
 // 弹出原生保存对话框。filterName/默认扩展名/默认文件名按 UTF-8 传入。
 // 返回用户选择的完整路径；取消或失败返回空串。

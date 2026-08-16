@@ -1,5 +1,5 @@
-#pragma once
 // 黑簿 OS 主题探测 + 主题模式。Windows 读注册表 AppsUseLightTheme；其余平台回退。
+module;
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -10,7 +10,10 @@
 #include <windows.h>
 #endif
 
-namespace heibu {
+export module heibu.os_theme;
+import std;
+
+export namespace heibu {
 
 enum class ThemeMode { System, Dark, Light };
 

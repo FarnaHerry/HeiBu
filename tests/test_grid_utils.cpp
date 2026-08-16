@@ -1,5 +1,6 @@
 // 黑簿 — postProcessGrid 纯函数测试：隐藏键剥离、声明主键提取、复合键、无键只读。
-#include "db/grid_utils.h"
+import heibu.db.grid_utils;
+import heibu.db.types;
 
 import std;
 

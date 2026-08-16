@@ -1,14 +1,11 @@
-#pragma once
 // 黑簿 SQL 生成器 — 纯函数，返回 BoundStatement{sql, 绑定参数}。所有值走参数绑定，
 // 永不拼接字符串字面量，从而免疫注入，也让 CRUD 逻辑可无头单测。方言由首参 Dialect 决定。
-#include "db/dialect.h"
-#include "db/types.h"
+export module heibu.db.sql_builder;
+import std;
+import heibu.db.dialect;
+import heibu.db.types;
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
-namespace heibu::sql {
+export namespace heibu::sql {
 
 // 引用标识符（按方言）。
 inline std::string quoteIdent(Dialect d, const std::string& ident) {

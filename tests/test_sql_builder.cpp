@@ -1,6 +1,7 @@
 // 黑簿 — sql_builder 纯函数测试：方言标识符转义、ByKey CRUD 语句形态、NULL vs 空串绑定。
-#include "db/dialect.h"
-#include "db/sql_builder.h"
+import heibu.db.dialect;
+import heibu.db.sql_builder;
+import heibu.db.types;
 
 import std;
 

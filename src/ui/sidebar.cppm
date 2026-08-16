@@ -1,14 +1,17 @@
-#pragma once
 // 黑簿 大侧边栏 — 连接 → 数据库 → 对象分类（表/视图/存储过程/函数/触发器）→ 对象，四层树，虚拟化滚动。
-#include <eui_neo.h>
+module;
+#include "eui_ui.h"
 
-#include <string>
-#include <vector>
+export module heibu.ui.sidebar;
+import std;
+import heibu.app_actions;
+import heibu.app_state;
+import heibu.db.dialect;
+import heibu.db.types;
+import heibu.i18n;
+import heibu.ui.theme;
 
-#include "app_actions.h"
-#include "ui/theme.h"
-
-namespace heibu::ui {
+export namespace heibu::ui {
 
 struct SidebarRow {
     enum class Kind { Conn, Database, Category, Object } kind;

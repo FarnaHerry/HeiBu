@@ -1,21 +1,13 @@
-#pragma once
 // 黑簿 应用状态 — 单例 AppState 是全应用唯一的数据源。
 // compose() 自顶向下读 S() 构建元素树；事件回调改 S() 后由 app::requestUpdate() 触发重排。
-#include "db/driver.h"
-#include "db/types.h"
-#include "i18n/strings.h"
-#include "os_theme.h"
+export module heibu.app_state;
+import std;
+import heibu.db.driver;
+import heibu.db.types;
+import heibu.i18n;
+import heibu.os_theme;
 
-#include <chrono>
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
-namespace heibu {
+export namespace heibu {
 
 enum class TabKind { Table, Query, Settings };
 

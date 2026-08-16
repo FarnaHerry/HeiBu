@@ -1,17 +1,21 @@
-#pragma once
 // 黑簿 根布局 — 大侧边栏（标签 + 命籍/卷宗选择器）+ 内容岛卡片 + 状态栏 + 对话框。
-// 无全宽顶栏：标签条已收缩进侧边栏。
-#include <eui_neo.h>
+module;
+#include "eui_ui.h"
 
-#include "app_actions.h"
-#include "ui/dialogs.h"
-#include "ui/editor.h"
-#include "ui/grid.h"
-#include "ui/settings.h"
-#include "ui/sidebar.h"
-#include "ui/theme.h"
+export module heibu.ui.shell;
+import std;
+import heibu.app_actions;
+import heibu.app_state;
+import heibu.db.types;
+import heibu.i18n;
+import heibu.ui.dialogs;
+import heibu.ui.editor;
+import heibu.ui.grid;
+import heibu.ui.settings;
+import heibu.ui.sidebar;
+import heibu.ui.theme;
 
-namespace heibu::ui {
+export namespace heibu::ui {
 
 // 可编辑表格的操作条（置为 NULL / 勾销此名 / 添一笔）。
 inline void composeTableActions(eui::Ui& ui, const Tab& tab, float x, float y, float w,
@@ -73,7 +77,7 @@ inline void composeDeleteConfirm(eui::Ui& ui, float w, float h,
         .build();
 }
 
-// 分页栏：首页/上一页/下一页/末页 + 页码指示 + 每页行数选择。
+// 分页栏：首页/上一页/下一页/末页 + 页码指示 + 每页行数选择 + 导出 CSV。
 inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, float w, float h,
                                  const components::theme::ThemeColorTokens& t) {
     const std::string tabId = tab.id;
@@ -229,7 +233,7 @@ inline void composeResultArea(eui::Ui& ui, const Tab& tab, float x, float y, flo
     }
 }
 
-// 查卷标签：工具栏（批阅）+ 编辑器 + 结果区。
+// 查卷标签：工具栏（批阅 + 导出 CSV）+ 编辑器 + 结果区。
 inline void composeQueryTab(eui::Ui& ui, const Tab& tab, float x, float y, float w, float h,
                             const components::theme::ThemeColorTokens& t) {
     const float toolbarH = 36.0f;

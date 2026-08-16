@@ -1,9 +1,7 @@
-#pragma once
 // 黑簿 Redis 驱动 — 包 hiredis（compat.hiredis 1.2.0），把键值库映射进树：
 //   连接 → db0..db15 → 键类型（string/hash/list/set/zset）→ 键。
 // 键值只读展示（GET/HGETALL/LRANGE/SMEMBERS/ZRANGE）；查询标签里可直接跑任意 Redis 命令。
-#include "db/driver.h"
-
+module;
 // hiredis.h 只前置声明了 struct timeval，完整定义来自平台头；先引入再包 hiredis。
 #ifdef _WIN32
 #include <winsock2.h>
@@ -12,12 +10,13 @@
 #endif
 #include <hiredis/hiredis.h>
 
-#include <cstdlib>
-#include <mutex>
-#include <string>
-#include <vector>
+export module heibu.db.driver_redis;
+import std;
+import heibu.db.dialect;
+import heibu.db.driver;
+import heibu.db.types;
 
-namespace heibu {
+export namespace heibu {
 
 class RedisDriver : public IDbDriver {
 public:

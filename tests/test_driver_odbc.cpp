@@ -1,6 +1,8 @@
 // 黑簿 — DriverOdbc 端到端：连本机 MySQL，跑 SELECT VERSION() 与 listTables。
 // 本机无 MySQL ODBC 驱动 / 服务时优雅 SKIP（不判失败）。
-#include "db/driver_odbc.h"
+import heibu.db.driver_odbc;
+import heibu.db.dialect;
+import heibu.db.types;
 
 import std;
 

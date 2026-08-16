@@ -1,5 +1,6 @@
 // 黑簿 — 连接配置 JSON 往返（含服务器库字段）、缺文件、坏文件、CJK 名称。
-#include "store/connections.h"
+import heibu.store.connections;
+import heibu.db.types;
 
 #include <filesystem>
 import std;

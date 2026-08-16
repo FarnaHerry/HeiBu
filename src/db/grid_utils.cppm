@@ -1,11 +1,9 @@
-#pragma once
 // 黑簿 网格后处理 — 纯函数：剥离隐藏键列、按键列提取键值、置 editable。可无头测试。
-#include "db/types.h"
+export module heibu.db.grid_utils;
+import std;
+import heibu.db.types;
 
-#include <string>
-#include <vector>
-
-namespace heibu {
+export namespace heibu {
 
 // 1) 若首列是隐藏键列（SELECT rowid AS "__heibu_key__" 的产物），剥离进 keys 并擦除该列。
 // 2) 否则若 keyColumns 非空，从可见列按名提取键值。

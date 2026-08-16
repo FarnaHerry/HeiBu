@@ -1,14 +1,11 @@
-#pragma once
 // 黑簿 数据库驱动抽象 — v2：方言感知、主键编辑模型、服务器连接配置。
-// 本头不包含任何具体客户端库头（sqlite3.h / libpq-fe.h 等），保持可无头测试、可被 UI 层与驱动实现共同依赖。
-#include "db/dialect.h"
-#include "db/types.h"
+// 本模块不包含任何具体客户端库头（sqlite3.h / libpq-fe.h 等），保持可无头测试、可被 UI 层与驱动实现共同依赖。
+export module heibu.db.driver;
+import std;
+import heibu.db.dialect;
+import heibu.db.types;
 
-#include <functional>
-#include <string>
-#include <vector>
-
-namespace heibu {
+export namespace heibu {
 
 // 协作式取消检查：返回 true 表示应尽早中止（查询会周期性轮询）。
 using CancelCheck = std::function<bool()>;

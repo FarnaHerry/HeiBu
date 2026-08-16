@@ -1,9 +1,8 @@
-#pragma once
 // 黑簿 方言层 — 各数据库的标识符引用 / 占位符 / LIMIT 语法差异。纯函数，可无头测试。
-#include <string>
-#include <string_view>
+export module heibu.db.dialect;
+import std;
 
-namespace heibu {
+export namespace heibu {
 
 enum class Dialect { Sqlite, MySql, Postgre, Redis };
 

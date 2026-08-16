@@ -1,17 +1,15 @@
-#pragma once
 // 黑簿 SQLite 驱动 — 唯一 include <sqlite3.h> 的地方。
 // 线程模型：SQLITE_OPEN_FULLMUTEX + 每连接 std::mutex 串行化；同连接的并发查询排队。
-#include "db/driver.h"
-
+module;
 #include <sqlite3.h>
 
-#include <algorithm>
-#include <chrono>
-#include <mutex>
-#include <string>
-#include <vector>
+export module heibu.db.driver_sqlite;
+import std;
+import heibu.db.dialect;
+import heibu.db.driver;
+import heibu.db.types;
 
-namespace heibu {
+export namespace heibu {
 
 class SqliteDriver : public IDbDriver {
 public:

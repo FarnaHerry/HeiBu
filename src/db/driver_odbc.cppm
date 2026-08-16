@@ -1,14 +1,13 @@
-#pragma once
 // 黑簿 ODBC 驱动 — 通过 heibu.odbc 模块（包 nanodbc）连任意有 ODBC 驱动的库（MySQL/PG/SQL Server…）。
 // 键检测走 nanodbc::catalog::primary_keys；无主键的表只读。
-#include "db/driver.h"
+export module heibu.db.driver_odbc;
+import std;
+import heibu.db.driver;
+import heibu.db.dialect;
+import heibu.db.types;
 import heibu.odbc;
 
-#include <memory>
-#include <string>
-#include <vector>
-
-namespace heibu {
+export namespace heibu {
 
 class DriverOdbc : public IDbDriver {
 public:

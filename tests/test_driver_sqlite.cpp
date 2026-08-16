@@ -1,7 +1,9 @@
 // 黑簿 — SqliteDriver 测试：内存库 CRUD、物化（NULL/BLOB/UTF-8）、截断、键编辑、主键检测。
-#include "db/driver_sqlite.h"
-#include "db/grid_utils.h"
-#include "db/sql_builder.h"
+import heibu.db.driver_sqlite;
+import heibu.db.dialect;
+import heibu.db.grid_utils;
+import heibu.db.sql_builder;
+import heibu.db.types;
 
 import std;
 

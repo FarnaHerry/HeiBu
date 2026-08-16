@@ -1,14 +1,14 @@
-#pragma once
-// 黑簿 数据网格 — 表头 + virtualList 数据行；支持选中/单元格编辑/NULL 显示。
+// 黑簿 数据网格 — 表头 + virtualList 数据行；支持选中/单元格编辑/NULL 显示/列宽拖动/横向滚动/省略号。
 // 单元格编辑：单击选中、再点进入编辑、Enter/失焦提交（落笔即生效）。
-#include <eui_neo.h>
+module;
+#include "eui_ui.h"
 
-#include <algorithm>
-
-#include "app_actions.h"
-#include "ui/theme.h"
-
-namespace heibu::ui {
+export module heibu.ui.grid;
+import std;
+import heibu.app_actions;
+import heibu.app_state;
+import heibu.db.types;
+import heibu.ui.theme;
 
 namespace {
 
@@ -84,6 +84,8 @@ inline std::string ellipsize(const std::string& text, float maxWidth, float font
 }
 
 } // namespace
+
+export namespace heibu::ui {
 
 inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, float h,
                         const components::theme::ThemeColorTokens& t) {

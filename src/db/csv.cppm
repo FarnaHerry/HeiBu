@@ -1,10 +1,9 @@
-#pragma once
 // 黑簿 CSV 导出 — 纯函数：把 ResultGrid 序列化为 CSV 文本（UTF-8 BOM + 表头 + 数据行）。可无头测试。
-#include "db/types.h"
+export module heibu.db.csv;
+import std;
+import heibu.db.types;
 
-#include <string>
-
-namespace heibu {
+export namespace heibu {
 
 // CSV 字段转义：含逗号/引号/换行时用双引号包裹，内部双引号翻倍。
 inline std::string csvField(const std::string& text, bool quoteAlways = false) {

@@ -1,11 +1,8 @@
-#pragma once
 // 黑簿 数据模型 — 纯数据结构，无任何依赖，可无头测试。
-#include <cstdint>
-#include <optional>
-#include <string>
-#include <vector>
+export module heibu.db.types;
+import std;
 
-namespace heibu {
+export namespace heibu {
 
 // 隐藏键列的保留别名：SQLite 无声明主键时，驱动 SELECT rowid AS "__heibu_key__" 带出，
 // 由 postProcessGrid 剥离进 ResultGrid.keys。

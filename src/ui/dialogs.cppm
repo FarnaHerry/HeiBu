@@ -1,11 +1,13 @@
-#pragma once
 // 黑簿 对话框 — 新命籍（连接）表单。components::dialog 的 content 会替换默认标题/按钮，故表单里自绘按钮。
-#include <eui_neo.h>
+module;
+#include "eui_ui.h"
 
-#include "app_actions.h"
-#include "ui/theme.h"
-
-namespace heibu::ui {
+export module heibu.ui.dialogs;
+import std;
+import heibu.app_actions;
+import heibu.app_state;
+import heibu.i18n;
+import heibu.ui.theme;
 
 namespace {
 
@@ -37,6 +39,8 @@ inline const char* driverDisplayName(const std::string& d) {
 }
 
 } // namespace
+
+export namespace heibu::ui {
 
 inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
     AppState& s = S();
@@ -177,11 +181,7 @@ inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::t
                 components::button(ui, "conn_dialog.cancel")
                     .position(346.0f, 256.0f).size(88.0f, 32.0f)
                     .text(std::string(L(StrId::Cancel))).fontSize(13.0f).theme(t, false)
-                    .onClick([] {
-                        S().showConnDialog = false;
-                        S().connError.clear();
-                        app::requestUpdate();
-                    })
+                    .onClick([] { heibu::closeConnDialog(); })
                     .build();
             } else if (isRedis) {
                 // Redis 表单：名称 / 主机+端口 / 密码 / 数据库索引
@@ -241,11 +241,7 @@ inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::t
                 components::button(ui, "conn_dialog.cancel")
                     .position(346.0f, 350.0f).size(88.0f, 32.0f)
                     .text(std::string(L(StrId::Cancel))).fontSize(13.0f).theme(t, false)
-                    .onClick([] {
-                        S().showConnDialog = false;
-                        S().connError.clear();
-                        app::requestUpdate();
-                    })
+                    .onClick([] { heibu::closeConnDialog(); })
                     .build();
             } else {
                 // 服务器库表单：名称 / 主机+端口 / 用户 / 密码 / 数据库
@@ -314,11 +310,7 @@ inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::t
                 components::button(ui, "conn_dialog.cancel")
                     .position(346.0f, 402.0f).size(88.0f, 32.0f)
                     .text(std::string(L(StrId::Cancel))).fontSize(13.0f).theme(t, false)
-                    .onClick([] {
-                        S().showConnDialog = false;
-                        S().connError.clear();
-                        app::requestUpdate();
-                    })
+                    .onClick([] { heibu::closeConnDialog(); })
                     .build();
             }
 

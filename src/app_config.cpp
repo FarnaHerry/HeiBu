@@ -5,10 +5,12 @@
 // own-main 模式须显式 include（eui_neo.h 只拉到声明）。
 #include "eui/detail/dsl_app_impl.h"
 
-#include "app_state.h"
-#include "ui/shell.h"
-
 import std;
+import heibu.app_state;
+import heibu.os_theme;
+import heibu.store.connections;
+import heibu.ui.shell;
+import heibu.ui.theme;
 
 namespace {
 

@@ -1,12 +1,12 @@
-#pragma once
 // 黑簿 UI 主题与布局常量 — 风格取自 tinynext：岛卡片浮层 + 侧栏条目 + uiScale 原生缩放。
-#include <eui_neo.h>
+module;
+#include "eui_ui.h"
 
-#include <functional>
+export module heibu.ui.theme;
+import std;
+import heibu.app_state;
 
-#include "app_state.h"
-
-namespace heibu::ui {
+export namespace heibu::ui {
 
 // eui-neo 0.5.6 原生全局缩放：所有尺寸按「设计逻辑像素」书写，窗口物理尺寸 = 设计 × kUI。
 inline constexpr float kUI = 1.4f;

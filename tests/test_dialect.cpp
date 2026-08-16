@@ -1,5 +1,5 @@
 // 黑簿 — 方言层纯函数测试：driver 字符串映射、占位符、LIMIT、标识符引用。
-#include "db/dialect.h"
+import heibu.db.dialect;
 
 import std;
 

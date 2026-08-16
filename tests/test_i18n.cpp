@@ -1,5 +1,5 @@
 // 黑簿 — i18n 完整性：每个 StrId 的中英文都非空。
-#include "i18n/strings.h"
+import heibu.i18n;
 
 import std;
 

@@ -1,9 +1,8 @@
-#pragma once
 // 黑簿 i18n — 中文打底，英文预留。字符串统一走 tr(StrId, Locale)，界面代码不硬编码文案。
-#include <string>
-#include <string_view>
+export module heibu.i18n;
+import std;
 
-namespace heibu {
+export namespace heibu {
 
 enum class Locale { Zh, En };
 

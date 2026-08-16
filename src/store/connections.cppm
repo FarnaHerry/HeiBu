@@ -1,17 +1,12 @@
-#pragma once
 // 黑簿 连接配置持久化 — JSON 存 %APPDATA%\Heibu\connections.json，用 yyjson 读写。
-#include "db/types.h"
-
+module;
 #include <yyjson.h>
 
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
-#include <string>
-#include <vector>
+export module heibu.store.connections;
+import std;
+import heibu.db.types;
 
-namespace heibu {
+export namespace heibu {
 
 struct ConnectionStore {
     static std::filesystem::path configPath() {

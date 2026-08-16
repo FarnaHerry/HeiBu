@@ -1,11 +1,14 @@
-#pragma once
 // 黑簿 设置页 — 主题模式（跟随系统/深色/浅色）+ 语言（中文/English）。
-#include <eui_neo.h>
+module;
+#include "eui_ui.h"
 
-#include "app_state.h"
-#include "ui/theme.h"
+export module heibu.ui.settings;
+import std;
+import heibu.app_state;
+import heibu.i18n;
+import heibu.os_theme;
 
-namespace heibu::ui {
+export namespace heibu::ui {
 
 inline void composeSettings(eui::Ui& ui, float x, float y, float w, float h,
                             const components::theme::ThemeColorTokens& t) {

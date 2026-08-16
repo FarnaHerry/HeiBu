@@ -1,63 +1,23 @@
-#pragma once
 // 黑簿 业务动作 — 打开/关闭连接、开/关标签、异步加载表格与执行查询。
 // 依赖 eui 的 core::async（查询在线程池、then 编回 UI 线程），故属于 UI 层而非 db 层。
-#include <eui_neo.h>
+module;
+#include "ui/eui_ui.h"
 
-#include "app_state.h"
-#include "db/csv.h"
-#include "db/driver_factory.h"
-#include "db/grid_utils.h"
-#include "db/sql_builder.h"
-#include "store/connections.h"
-#include "store/save_dialog.h"
+export module heibu.app_actions;
+import std;
+import heibu.app_state;
+import heibu.db.csv;
+import heibu.db.dialect;
+import heibu.db.driver;
+import heibu.db.driver_factory;
+import heibu.db.grid_utils;
+import heibu.db.sql_builder;
+import heibu.db.types;
+import heibu.i18n;
+import heibu.store.connections;
+import heibu.store.save_dialog;
 
-#include <algorithm>
-
-namespace heibu {
-
-// 弹出全局 toast 反馈。
-inline void showToast(const std::string& title, const std::string& message) {
-    S().toastTitle = title;
-    S().toastMessage = message;
-    S().toastVisible = true;
-    app::requestUpdate();
-}
-
-// 导出当前活动标签的结果网格为 CSV。
-inline void exportCsv() {
-    AppState& s = S();
-    if (!s.activeTabId) {
-        return;
-    }
-    auto it = s.tabs.find(*s.activeTabId);
-    if (it == s.tabs.end() || !it->second.result) {
-        showToast("导出", "没有可导出的结果");
-        return;
-    }
-    const ResultGrid& grid = *it->second.result;
-    if (grid.columns.empty() && grid.rows.empty()) {
-        showToast("导出", "结果为空");
-        return;
-    }
-    // 默认文件名：标签标题 + .csv，非法字符替换为 _
-    std::string defaultName = it->second.title + ".csv";
-    for (char& ch : defaultName) {
-        if (ch == ':' || ch == '/' || ch == '\\' || ch == '*' || ch == '?' ||
-            ch == '"' || ch == '<' || ch == '>' || ch == '|') {
-            ch = '_';
-        }
-    }
-    const std::string path = saveFileDialog("导出 CSV", "CSV 文件", "csv", defaultName);
-    if (path.empty()) {
-        return;   // 用户取消
-    }
-    const std::string csv = resultToCsv(grid);
-    if (!writeFileUtf8(path, csv)) {
-        showToast("导出失败", "无法写入: " + path);
-        return;
-    }
-    showToast("导出成功", std::to_string(grid.rows.size()) + " 行已保存到 " + path);
-}
+export namespace heibu {
 
 inline constexpr std::int64_t kRowCap = 50000;
 
@@ -376,33 +336,6 @@ inline void openTableTab(const std::string& connId, const std::string& database,
     app::requestUpdate();
 }
 
-// 打开对象（触发器/存储过程/函数/视图）的 DDL 为查询标签（只读展示）。
-inline void openObjectDdl(const std::string& connId, const std::string& database,
-                          const std::string& name, const std::string& type) {
-    auto driver = ensureSession(connId);
-    if (!driver) {
-        app::requestUpdate();
-        return;
-    }
-    std::string ddl;
-    std::string err;
-    if (!driver->objectDdl(database, name, type, ddl, err)) {
-        S().statusMessage = std::string(L(StrId::Error)) + ": " + err;
-        app::requestUpdate();
-        return;
-    }
-    Tab tab;
-    tab.id = newId();
-    tab.kind = TabKind::Query;
-    tab.connectionId = connId;
-    tab.title = name;
-    tab.sqlText = ddl;
-    S().tabs[tab.id] = std::move(tab);
-    S().openTabIds.push_back(tab.id);
-    S().activeTabId = tab.id;
-    app::requestUpdate();
-}
-
 // 查看 Redis 键的值：按类型物化成网格并展示（只读）。
 inline void openRedisKey(const std::string& connId, const std::string& database,
                          const std::string& key) {
@@ -470,6 +403,33 @@ inline void openTableProperties(const std::string& connId, const std::string& da
     S().openTabIds.push_back(tabId);
     S().activeTabId = tabId;
     runQueryAsync(tabId, sql, "query", driver);
+    app::requestUpdate();
+}
+
+// 打开对象（触发器/存储过程/函数/视图）的 DDL 为查询标签（只读展示）。
+inline void openObjectDdl(const std::string& connId, const std::string& database,
+                          const std::string& name, const std::string& type) {
+    auto driver = ensureSession(connId);
+    if (!driver) {
+        app::requestUpdate();
+        return;
+    }
+    std::string ddl;
+    std::string err;
+    if (!driver->objectDdl(database, name, type, ddl, err)) {
+        S().statusMessage = std::string(L(StrId::Error)) + ": " + err;
+        app::requestUpdate();
+        return;
+    }
+    Tab tab;
+    tab.id = newId();
+    tab.kind = TabKind::Query;
+    tab.connectionId = connId;
+    tab.title = name;
+    tab.sqlText = ddl;
+    S().tabs[tab.id] = std::move(tab);
+    S().openTabIds.push_back(tab.id);
+    S().activeTabId = tab.id;
     app::requestUpdate();
 }
 
@@ -827,29 +787,6 @@ inline void commitChanges(const std::string& tabId) {
     app::requestUpdate();
 }
 
-// 关闭标签；取消其进行中的异步任务。
-inline void closeTab(const std::string& tabId) {
-    core::async::cancel("load." + tabId);
-    core::async::cancel("query." + tabId);
-    AppState& s = S();
-    auto tit = s.tabs.find(tabId);
-    if (tit != s.tabs.end() && tit->second.dirty) {
-        if (auto driver = ensureSession(tit->second.connectionId)) {
-            ResultGrid g;
-            std::string err;
-            (void)driver->run(BoundStatement("ROLLBACK"), g, kRowCap, err);
-        }
-    }
-    s.tabs.erase(tabId);
-    if (auto it = std::ranges::find(s.openTabIds, tabId); it != s.openTabIds.end()) {
-        s.openTabIds.erase(it);
-    }
-    if (s.activeTabId && *s.activeTabId == tabId) {
-        s.activeTabId = s.openTabIds.empty() ? std::nullopt : std::optional<std::string>(s.openTabIds.back());
-    }
-    app::requestUpdate();
-}
-
 // 批量关闭标签；关闭后活动标签切到 keepTabId。
 inline void closeTabIds(const std::vector<std::string>& ids, const std::string& keepTabId) {
     AppState& s = S();
@@ -923,6 +860,75 @@ inline void closeOtherTabs(const std::string& tabId) {
 inline void closeAllTabs() {
     std::vector<std::string> ids = S().openTabIds;   // 拷贝，避免与 erase 别名
     closeTabIds(ids, "");
+}
+
+// 关闭标签；取消其进行中的异步任务。
+inline void closeTab(const std::string& tabId) {
+    core::async::cancel("load." + tabId);
+    core::async::cancel("query." + tabId);
+    AppState& s = S();
+    auto tit = s.tabs.find(tabId);
+    if (tit != s.tabs.end() && tit->second.dirty) {
+        if (auto driver = ensureSession(tit->second.connectionId)) {
+            ResultGrid g;
+            std::string err;
+            (void)driver->run(BoundStatement("ROLLBACK"), g, kRowCap, err);
+        }
+    }
+    s.tabs.erase(tabId);
+    if (auto it = std::ranges::find(s.openTabIds, tabId); it != s.openTabIds.end()) {
+        s.openTabIds.erase(it);
+    }
+    if (s.activeTabId && *s.activeTabId == tabId) {
+        s.activeTabId = s.openTabIds.empty() ? std::nullopt : std::optional<std::string>(s.openTabIds.back());
+    }
+    app::requestUpdate();
+}
+
+// ── 连接对话框 ────────────────────────────────────────────────────────────
+
+// 弹出全局 toast 反馈。
+inline void showToast(const std::string& title, const std::string& message) {
+    S().toastTitle = title;
+    S().toastMessage = message;
+    S().toastVisible = true;
+    app::requestUpdate();
+}
+
+// 导出当前活动标签的结果网格为 CSV。
+inline void exportCsv() {
+    AppState& s = S();
+    if (!s.activeTabId) {
+        return;
+    }
+    auto it = s.tabs.find(*s.activeTabId);
+    if (it == s.tabs.end() || !it->second.result) {
+        showToast("导出", "没有可导出的结果");
+        return;
+    }
+    const ResultGrid& grid = *it->second.result;
+    if (grid.columns.empty() && grid.rows.empty()) {
+        showToast("导出", "结果为空");
+        return;
+    }
+    // 默认文件名：标签标题 + .csv，非法字符替换为 _
+    std::string defaultName = it->second.title + ".csv";
+    for (char& ch : defaultName) {
+        if (ch == ':' || ch == '/' || ch == '\\' || ch == '*' || ch == '?' ||
+            ch == '"' || ch == '<' || ch == '>' || ch == '|') {
+            ch = '_';
+        }
+    }
+    const std::string path = saveFileDialog("导出 CSV", "CSV 文件", "csv", defaultName);
+    if (path.empty()) {
+        return;   // 用户取消
+    }
+    const std::string csv = resultToCsv(grid);
+    if (!writeFileUtf8(path, csv)) {
+        showToast("导出失败", "无法写入: " + path);
+        return;
+    }
+    showToast("导出成功", std::to_string(grid.rows.size()) + " 行已保存到 " + path);
 }
 
 // 保存连接对话框表单：按驱动分支填字段并持久化。

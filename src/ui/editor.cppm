@@ -1,10 +1,12 @@
-#pragma once
 // 黑簿 SQL 编辑器 — components::input 多行 + monospace。无语法高亮（MVP 取舍）。
-#include <eui_neo.h>
+module;
+#include "eui_ui.h"
 
-#include "app_actions.h"
+export module heibu.ui.editor;
+import std;
+import heibu.app_state;
 
-namespace heibu::ui {
+export namespace heibu::ui {
 
 inline void composeEditor(eui::Ui& ui, const Tab& tab, float x, float y, float w, float h,
                           const components::theme::ThemeColorTokens& t) {

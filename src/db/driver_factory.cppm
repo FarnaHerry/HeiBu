@@ -1,14 +1,13 @@
-#pragma once
 // 黑簿 驱动工厂 — 全项目唯一按 driver 字符串分派的点。
-#include "db/driver.h"
-#include "db/driver_odbc.h"
-#include "db/driver_redis.h"
-#include "db/driver_sqlite.h"
+export module heibu.db.driver_factory;
+import std;
+import heibu.db.dialect;
+import heibu.db.driver;
+import heibu.db.driver_odbc;
+import heibu.db.driver_redis;
+import heibu.db.driver_sqlite;
 
-#include <memory>
-#include <string>
-
-namespace heibu {
+export namespace heibu {
 
 inline std::shared_ptr<IDbDriver> createDriver(const std::string& kind) {
     if (kind.empty() || kind == "sqlite") {
