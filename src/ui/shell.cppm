@@ -168,8 +168,8 @@ inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, 
             .text(info).fontSize(12.0f).color(t.text);
     }
 
-    // 每页行数下拉
-    const float sx = x + w - 100.0f;
+    // 每页行数下拉（让位给右侧导出按钮）
+    const float sx = x + w - 100.0f - 88.0f - 4.0f;
     components::button(ui, "page.size." + tabId)
         .position(sx, y + 4.0f).size(96.0f, 24.0f)
         .text("每页 " + std::to_string(tab.pageSize) + " 行 ▾").fontSize(11.0f).theme(t, false)
@@ -178,6 +178,19 @@ inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, 
             S().pageSizeMenuTabId = tabId;
             S().pageSizeMenuX = sx;
             S().pageSizeMenuY = y + 30.0f;
+            app::requestUpdate();
+        })
+        .build();
+
+    // 导出按钮：页数选择后面（分页栏最右下角），上拉格式菜单。
+    const float ex = x + w - 88.0f;
+    components::button(ui, "page.export." + tabId)
+        .position(ex, y + 4.0f).size(84.0f, 24.0f)
+        .text("导出 ▴").fontSize(11.0f).theme(t, false)
+        .onClick([ex, y] {
+            S().exportMenuOpen = true;
+            S().exportMenuX = ex;
+            S().exportMenuY = y - 140.0f;   // 上拉：菜单在分页栏上方
             app::requestUpdate();
         })
         .build();
@@ -228,23 +241,6 @@ inline void composeResultArea(eui::Ui& ui, const Tab& tab, float x, float y, flo
     if (paginated) {
         composePaginationBar(ui, tab, x, y + h - pageH, w, pageH, t);
     }
-
-    // 数据页右下角的导出按钮：点击弹出上拉格式菜单。
-    const float btnW = 72.0f;
-    const float btnH = 24.0f;
-    const float btnX = x + w - btnW - 8.0f;
-    const float btnY = gridY + gridH - btnH - 8.0f;
-    const std::string tabId = tab.id;
-    components::button(ui, "export.fab." + tabId)
-        .position(btnX, btnY).size(btnW, btnH)
-        .text("导出 ▴").fontSize(11.0f).theme(t, false)
-        .onClick([btnX, btnY] {
-            S().exportMenuOpen = true;
-            S().exportMenuX = btnX;
-            S().exportMenuY = btnY;
-            app::requestUpdate();
-        })
-        .build();
 }
 
 // 查卷标签：工具栏（批阅 + 导出 CSV）+ 编辑器 + 结果区。
@@ -258,6 +254,17 @@ inline void composeQueryTab(eui::Ui& ui, const Tab& tab, float x, float y, float
         .position(x + 12.0f, y + 5.0f).size(72.0f, 26.0f)
         .text(std::string(L(StrId::Run))).fontSize(13.0f).theme(t, true)
         .onClick([tabId = tab.id] { heibu::runQueryTab(tabId); })
+        .build();
+    // 查询页无分页栏，导出按钮放工具栏（菜单下拉）
+    components::button(ui, "export." + tab.id)
+        .position(x + 92.0f, y + 5.0f).size(72.0f, 26.0f)
+        .text("导出 ▾").fontSize(12.0f).theme(t, false)
+        .onClick([ex = x + 92.0f, ey = y + 5.0f + 30.0f] {
+            S().exportMenuOpen = true;
+            S().exportMenuX = ex;
+            S().exportMenuY = ey;
+            app::requestUpdate();
+        })
         .build();
 
     composeEditor(ui, tab, x, y + toolbarH, w, editorH, t);
@@ -628,7 +635,7 @@ inline void composeExportMenu(eui::Ui& ui, float w, float h, const components::t
     components::contextMenu(ui, "export.menu")
         .open(true)
         .screen(w, h)
-        .position(S().exportMenuX, S().exportMenuY - 140.0f)   // 上拉：菜单位于按钮上方
+        .position(S().exportMenuX, S().exportMenuY)   // 各导出按钮已存好上拉/下拉的最终坐标
         .size(140.0f, 30.0f)
         .items(items)
         .theme(t)
