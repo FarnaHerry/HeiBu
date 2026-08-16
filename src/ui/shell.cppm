@@ -181,13 +181,6 @@ inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, 
             app::requestUpdate();
         })
         .build();
-
-    // 导出当前页 CSV
-    components::button(ui, "page.export." + tabId)
-        .position(sx - 84.0f, y + 4.0f).size(80.0f, 24.0f)
-        .text("导出 CSV").fontSize(11.0f).theme(t, false)
-        .onClick([] { heibu::exportCsv(); })
-        .build();
 }
 
 // 结果区：running / 错误 / DML 影响行数 / 空 / 网格。
@@ -221,16 +214,37 @@ inline void composeResultArea(eui::Ui& ui, const Tab& tab, float x, float y, flo
     const bool editable = grid.editable && !grid.keys.empty();
     const bool paginated = tab.kind == TabKind::Table;
     const float pageH = paginated ? 32.0f : 0.0f;
+    float gridY = y;
+    float gridH = h;
     if (editable) {
         const float barH = 30.0f;
         composeTableActions(ui, tab, x, y, w, t);
-        composeGrid(ui, tab, x, y + barH, w, h - barH - pageH, t);
+        gridY = y + barH;
+        gridH = h - barH - pageH;
     } else {
-        composeGrid(ui, tab, x, y, w, h - pageH, t);
+        gridH = h - pageH;
     }
+    composeGrid(ui, tab, x, gridY, w, gridH, t);
     if (paginated) {
         composePaginationBar(ui, tab, x, y + h - pageH, w, pageH, t);
     }
+
+    // 数据页右下角的导出按钮：点击弹出上拉格式菜单。
+    const float btnW = 72.0f;
+    const float btnH = 24.0f;
+    const float btnX = x + w - btnW - 8.0f;
+    const float btnY = gridY + gridH - btnH - 8.0f;
+    const std::string tabId = tab.id;
+    components::button(ui, "export.fab." + tabId)
+        .position(btnX, btnY).size(btnW, btnH)
+        .text("导出 ▴").fontSize(11.0f).theme(t, false)
+        .onClick([btnX, btnY] {
+            S().exportMenuOpen = true;
+            S().exportMenuX = btnX;
+            S().exportMenuY = btnY;
+            app::requestUpdate();
+        })
+        .build();
 }
 
 // 查卷标签：工具栏（批阅 + 导出 CSV）+ 编辑器 + 结果区。
@@ -244,11 +258,6 @@ inline void composeQueryTab(eui::Ui& ui, const Tab& tab, float x, float y, float
         .position(x + 12.0f, y + 5.0f).size(72.0f, 26.0f)
         .text(std::string(L(StrId::Run))).fontSize(13.0f).theme(t, true)
         .onClick([tabId = tab.id] { heibu::runQueryTab(tabId); })
-        .build();
-    components::button(ui, "export." + tab.id)
-        .position(x + 92.0f, y + 5.0f).size(72.0f, 26.0f)
-        .text("导出 CSV").fontSize(12.0f).theme(t, false)
-        .onClick([] { heibu::exportCsv(); })
         .build();
 
     composeEditor(ui, tab, x, y + toolbarH, w, editorH, t);
@@ -610,6 +619,31 @@ inline void composeTabContextMenu(eui::Ui& ui, float w, float h,
         .build();
 }
 
+// 导出格式上拉菜单：从数据页右下角导出按钮向上弹出。
+inline void composeExportMenu(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
+    if (!S().exportMenuOpen) {
+        return;
+    }
+    std::vector<std::string> items = {"CSV (.csv)", "TSV (.tsv)", "JSON (.json)", "SQL INSERT (.sql)"};
+    components::contextMenu(ui, "export.menu")
+        .open(true)
+        .screen(w, h)
+        .position(S().exportMenuX, S().exportMenuY - 140.0f)   // 上拉：菜单位于按钮上方
+        .size(140.0f, 30.0f)
+        .items(items)
+        .theme(t)
+        .zIndex(113)
+        .onSelect([](int idx) {
+            const char* fmts[] = {"csv", "tsv", "json", "sql"};
+            S().exportMenuOpen = false;
+            if (idx >= 0 && idx < 4) {
+                heibu::exportAs(fmts[idx]);
+            }
+        })
+        .onOpenChange([](bool open) { S().exportMenuOpen = open; })
+        .build();
+}
+
 // 全局 toast：右下角弹出，3 秒自动消失（导出成功/失败等反馈）。
 inline void composeToast(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
     components::toast(ui, "app.toast")
@@ -643,6 +677,7 @@ inline void composeShell(eui::Ui& ui, const eui::Screen& screen) {
     composeContextMenu(ui, w, h, t);
     composePageSizeMenu(ui, w, h, t);
     composeTabContextMenu(ui, w, h, t);
+    composeExportMenu(ui, w, h, t);
     composeToast(ui, w, h, t);
 }
 

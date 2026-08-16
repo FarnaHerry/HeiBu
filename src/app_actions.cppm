@@ -895,8 +895,8 @@ inline void showToast(const std::string& title, const std::string& message) {
     app::requestUpdate();
 }
 
-// 导出当前活动标签的结果网格为 CSV。
-inline void exportCsv() {
+// 导出当前活动标签的结果网格为指定格式（csv/tsv/json/sql）。
+inline void exportAs(const std::string& format) {
     AppState& s = S();
     if (!s.activeTabId) {
         return;
@@ -911,20 +911,37 @@ inline void exportCsv() {
         showToast("导出", "结果为空");
         return;
     }
-    // 默认文件名：标签标题 + .csv，非法字符替换为 _
-    std::string defaultName = it->second.title + ".csv";
+    const char* ext = "csv";
+    const char* filter = "CSV 文件 (*.csv)";
+    std::string content;
+    if (format == "tsv") {
+        ext = "tsv";
+        filter = "TSV 文件 (*.tsv)";
+        content = resultToTsv(grid);
+    } else if (format == "json") {
+        ext = "json";
+        filter = "JSON 文件 (*.json)";
+        content = resultToJson(grid);
+    } else if (format == "sql") {
+        ext = "sql";
+        filter = "SQL 文件 (*.sql)";
+        content = resultToSqlInsert(grid, it->second.tableName);
+    } else {
+        content = resultToCsv(grid);
+    }
+    // 默认文件名：标签标题 + 扩展名，非法字符替换为 _
+    std::string defaultName = it->second.title + "." + ext;
     for (char& ch : defaultName) {
         if (ch == ':' || ch == '/' || ch == '\\' || ch == '*' || ch == '?' ||
             ch == '"' || ch == '<' || ch == '>' || ch == '|') {
             ch = '_';
         }
     }
-    const std::string path = saveFileDialog("导出 CSV", "CSV 文件", "csv", defaultName);
+    const std::string path = saveFileDialog("导出", filter, ext, defaultName);
     if (path.empty()) {
         return;   // 用户取消
     }
-    const std::string csv = resultToCsv(grid);
-    if (!writeFileUtf8(path, csv)) {
+    if (!writeFileUtf8(path, content)) {
         showToast("导出失败", "无法写入: " + path);
         return;
     }

@@ -1,4 +1,4 @@
-// 黑簿 CSV 导出测试 — 序列化纯函数。
+// 黑簿 结果导出序列化测试 — CSV/TSV/JSON/SQL INSERT 纯函数。
 import heibu.db.csv;
 import heibu.db.types;
 
@@ -46,6 +46,38 @@ int main() {
             }
         }
         assert(crlf == 3);   // 表头 + 2 数据行
+    }
+
+    // 4) TSV：制表符分隔，NULL 空，内含制表符替换为空格
+    {
+        ResultGrid g;
+        g.columns = {{"a", "", 0}, {"b", "", 0}};
+        g.rows.push_back({CellValue{false, "x\ty"}, CellValue{true, ""}});
+        const std::string s = resultToTsv(g);
+        assert(s.size() >= 3 && s[0] == '\xEF');   // BOM
+        assert(s.find("\"a\"\t\"b\"\r\n") != std::string::npos || s.find("a\tb\r\n") != std::string::npos);
+        assert(s.find("x y\t\r\n") != std::string::npos);   // \t 替换为空格
+    }
+
+    // 5) JSON：对象数组，NULL → null，引号/反斜杠转义
+    {
+        ResultGrid g;
+        g.columns = {{"k", "", 0}, {"v", "", 0}};
+        g.rows.push_back({CellValue{false, "say \"hi\""}, CellValue{true, ""}});
+        const std::string s = resultToJson(g);
+        assert(s.find("\"k\": \"say \\\"hi\\\"\"") != std::string::npos);
+        assert(s.find("\"v\": null") != std::string::npos);
+    }
+
+    // 6) SQL INSERT：单引号翻倍，NULL → NULL，表名限定
+    {
+        ResultGrid g;
+        g.columns = {{"id", "", 0}, {"name", "", 0}};
+        g.rows.push_back({CellValue{false, "1"}, CellValue{false, "O'Reilly"}});
+        g.rows.push_back({CellValue{false, "2"}, CellValue{true, ""}});
+        const std::string s = resultToSqlInsert(g, "people");
+        assert(s.find("INSERT INTO \"people\" (\"id\", \"name\") VALUES ('1', 'O''Reilly');") != std::string::npos);
+        assert(s.find("VALUES ('2', NULL);") != std::string::npos);
     }
 
     return 0;
