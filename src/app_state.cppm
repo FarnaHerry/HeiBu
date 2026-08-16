@@ -9,7 +9,7 @@ import heibu.os_theme;
 
 export namespace heibu {
 
-enum class TabKind { Table, Query, Settings };
+enum class TabKind { Table, Query, Settings, Redis };
 
 struct CellRef {
     std::int64_t row;
@@ -53,6 +53,15 @@ struct Tab {
     bool editIsNull = false;
     bool addingRow = false;   // 正在追加草稿行（最后一行）
     bool dirty = false;       // 有未提交改动（事务已开）：编辑/删除/添一笔共用的修改状态
+
+    // Redis 值编辑器专用
+    std::string redisKey;                 // 键名
+    std::string redisType;                // string/hash/list/set/zset
+    std::vector<RedisEntry> redisEntries; // 值项（hash=字段/值）
+    std::vector<std::string> redisRemoved; // 待删除的 hash 字段
+    std::string redisTtlInput;            // TTL 输入缓冲（空=保持当前）
+    std::int64_t redisTtlCurrent = -1;    // 当前 TTL（展示用）
+    bool redisDirty = false;              // 有未保存改动
 };
 
 // 新建表对话框里的一个字段（列）。
@@ -71,6 +80,7 @@ struct AppState {
     std::set<std::string> expandedConnections;                               // 展开的连接 id
     std::set<std::string> expandedDatabases;                                 // 展开的数据库（connId + "\n" + database）
     std::set<std::string> expandedCategories;                                // 展开的对象分类（connId + "\n" + database + "\n" + type）
+    std::set<std::string> expandedRedisPaths;                                // 展开的 Redis 键树路径（connId + "\n" + db + "\n" + path）
 
     std::vector<std::string> openTabIds;       // 标签条顺序
     std::unordered_map<std::string, Tab> tabs;

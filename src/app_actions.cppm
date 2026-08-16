@@ -26,8 +26,9 @@ inline std::string tableSchema(Dialect dialect, const std::string& database) {
     return dialect == Dialect::Sqlite ? std::string() : database;
 }
 
-// 前向声明（编辑/删除流程在 cancelChanges 定义之前可能用到）。
+// 前向声明（编辑/删除流程在 cancelChanges 定义之前可能用到；Redis 保存用到 showToast）。
 inline void cancelChanges(const std::string& tabId);
+inline void showToast(const std::string& title, const std::string& message);
 
 // 设置侧边栏选中行并重排：点击谁，高亮谁。
 inline void selectSidebar(SidebarSelection::Kind kind, std::string connId,
@@ -336,7 +337,20 @@ inline void openTableTab(const std::string& connId, const std::string& database,
     app::requestUpdate();
 }
 
-// 查看 Redis 键的值：按类型物化成网格并展示（只读）。
+// 切换 Redis 键树中间段的展开状态。
+inline void toggleRedisPath(const std::string& connId, const std::string& database,
+                            const std::string& path) {
+    const std::string key = connId + "\n" + database + "\n" + path;
+    auto& s = S().expandedRedisPaths;
+    if (s.count(key)) {
+        s.erase(key);
+    } else {
+        s.insert(key);
+    }
+    app::requestUpdate();
+}
+
+// 打开 Redis 键值编辑器标签（可改值 + TTL）。
 inline void openRedisKey(const std::string& connId, const std::string& database,
                          const std::string& key) {
     auto driver = ensureSession(connId);
@@ -344,25 +358,128 @@ inline void openRedisKey(const std::string& connId, const std::string& database,
         app::requestUpdate();
         return;
     }
-    ResultGrid grid;
+    RedisValue v;
     std::string err;
-    if (!driver->keyValue(database, key, "", grid, err)) {
+    if (!driver->redisValue(database, key, v, err)) {
         S().statusMessage = std::string(L(StrId::Error)) + ": " + err;
         app::requestUpdate();
         return;
     }
-    postProcessGrid(grid, {});
     Tab tab;
     tab.id = newId();
-    tab.kind = TabKind::Query;
+    tab.kind = TabKind::Redis;
     tab.connectionId = connId;
+    tab.database = database;
     tab.title = key;
-    tab.sqlText = "KEY " + key;
-    tab.result = std::move(grid);
-    tab.running = false;
+    tab.redisKey = key;
+    tab.redisType = v.type;
+    tab.redisEntries = std::move(v.entries);
+    tab.redisRemoved.clear();
+    tab.redisTtlCurrent = v.ttl;
+    tab.redisTtlInput.clear();
+    tab.redisDirty = false;
     S().tabs[tab.id] = std::move(tab);
     S().openTabIds.push_back(tab.id);
     S().activeTabId = tab.id;
+    app::requestUpdate();
+}
+
+// ── Redis 值编辑器动作 ─────────────────────────────────────────────────────
+
+inline void updateRedisField(const std::string& tabId, std::size_t idx, bool isName,
+                             const std::string& v) {
+    auto it = S().tabs.find(tabId);
+    if (it == S().tabs.end() || idx >= it->second.redisEntries.size()) {
+        return;
+    }
+    if (isName) {
+        it->second.redisEntries[idx].name = v;
+    } else {
+        it->second.redisEntries[idx].value = v;
+    }
+    it->second.redisDirty = true;
+}
+
+inline void updateRedisStringValue(const std::string& tabId, const std::string& v) {
+    auto it = S().tabs.find(tabId);
+    if (it == S().tabs.end() || it->second.redisEntries.empty()) {
+        return;
+    }
+    it->second.redisEntries[0].value = v;
+    it->second.redisDirty = true;
+}
+
+inline void addRedisField(const std::string& tabId) {
+    auto it = S().tabs.find(tabId);
+    if (it == S().tabs.end()) {
+        return;
+    }
+    it->second.redisEntries.push_back({"", ""});
+    it->second.redisDirty = true;
+    app::requestUpdate();
+}
+
+inline void removeRedisField(const std::string& tabId, std::size_t idx) {
+    auto it = S().tabs.find(tabId);
+    if (it == S().tabs.end() || idx >= it->second.redisEntries.size()) {
+        return;
+    }
+    if (it->second.redisType == "hash") {
+        it->second.redisRemoved.push_back(it->second.redisEntries[idx].name);
+    }
+    it->second.redisEntries.erase(it->second.redisEntries.begin() + static_cast<std::ptrdiff_t>(idx));
+    it->second.redisDirty = true;
+    app::requestUpdate();
+}
+
+inline void updateRedisTtlInput(const std::string& tabId, const std::string& text) {
+    auto it = S().tabs.find(tabId);
+    if (it == S().tabs.end()) {
+        return;
+    }
+    it->second.redisTtlInput = text;
+    it->second.redisDirty = true;
+}
+
+// 保存 Redis 键值 + TTL；成功重载当前值并清空 TTL 输入。
+inline void saveRedisKey(const std::string& tabId) {
+    auto it = S().tabs.find(tabId);
+    if (it == S().tabs.end() || it->second.kind != TabKind::Redis) {
+        return;
+    }
+    Tab& tab = it->second;
+    auto driver = ensureSession(tab.connectionId);
+    if (!driver) {
+        return;
+    }
+    RedisValue v;
+    v.type = tab.redisType;
+    v.entries = tab.redisEntries;
+    bool ttlChanged = false;
+    if (!tab.redisTtlInput.empty()) {
+        try {
+            v.ttl = std::stoll(tab.redisTtlInput);
+            ttlChanged = true;
+        } catch (...) {
+            showToast("TTL 无效", "TTL 需为整数秒，空=保持当前，-1=持久");
+            return;
+        }
+    }
+    std::string err;
+    if (!driver->redisSave(tab.database, tab.redisKey, v, tab.redisRemoved, ttlChanged, err)) {
+        showToast("保存失败", err);
+        return;
+    }
+    // 重载当前值
+    RedisValue nv;
+    if (driver->redisValue(tab.database, tab.redisKey, nv, err)) {
+        tab.redisEntries = std::move(nv.entries);
+        tab.redisTtlCurrent = nv.ttl;
+    }
+    tab.redisRemoved.clear();
+    tab.redisTtlInput.clear();
+    tab.redisDirty = false;
+    showToast("已保存", tab.redisKey);
     app::requestUpdate();
 }
 

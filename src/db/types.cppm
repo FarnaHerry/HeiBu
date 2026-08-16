@@ -78,4 +78,17 @@ struct TableKey {
     bool hidden = false;
 };
 
+// Redis 值项：hash=字段→值；list=索引→元素；zset=成员→分值；string/set 的 name 为空。
+struct RedisEntry {
+    std::string name;
+    std::string value;
+};
+
+// Redis 键值 + TTL：type 为 string/hash/list/set/zset；ttl 秒数（-1=无过期，-2=键不存在）。
+struct RedisValue {
+    std::string type;
+    std::int64_t ttl = -1;
+    std::vector<RedisEntry> entries;
+};
+
 } // namespace heibu

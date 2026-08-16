@@ -11,6 +11,7 @@ import heibu.i18n;
 import heibu.ui.dialogs;
 import heibu.ui.editor;
 import heibu.ui.grid;
+import heibu.ui.redis_editor;
 import heibu.ui.settings;
 import heibu.ui.sidebar;
 import heibu.ui.theme;
@@ -436,6 +437,8 @@ inline void composeContent(eui::Ui& ui, float w, float h, const components::them
         composeSettings(ui, ix, ry, iw, rh, t);
     } else if (tab.kind == TabKind::Query) {
         composeQueryTab(ui, tab, ix, ry, iw, rh, t);
+    } else if (tab.kind == TabKind::Redis) {
+        composeRedisEditor(ui, tab, ix, ry, iw, rh, t);
     } else {
         composeResultArea(ui, tab, ix, ry, iw, rh, t);
     }

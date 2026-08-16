@@ -206,6 +206,121 @@ public:
         return true;
     }
 
+    // 读键值 + TTL：按类型物化 entries，TTL key 取剩余秒数。
+    bool redisValue(const std::string& database, const std::string& key, RedisValue& out,
+                    std::string& error) override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!ctx_) {
+            error = "not connected";
+            return false;
+        }
+        if (!selectDb(parseDb(database), error)) {
+            return false;
+        }
+        const std::string t = keyType(key);
+        if (t.empty() || t == "none") {
+            error = "键不存在: " + key;
+            return false;
+        }
+        out = RedisValue{};
+        out.type = t;
+        std::vector<std::string> args;
+        if (t == "string") {
+            args = {"GET", key};
+        } else if (t == "hash") {
+            args = {"HGETALL", key};
+        } else if (t == "list") {
+            args = {"LRANGE", key, "0", "-1"};
+        } else if (t == "set") {
+            args = {"SMEMBERS", key};
+        } else if (t == "zset") {
+            args = {"ZRANGE", key, "0", "-1", "WITHSCORES"};
+        } else {
+            error = "暂不支持的键类型: " + t;
+            return false;
+        }
+        redisReply* r = commandArgv(args, error);
+        if (!r) {
+            return false;
+        }
+        if (t == "hash" || t == "zset") {
+            for (std::size_t i = 0; i + 1 < r->elements; i += 2) {
+                out.entries.push_back({replyText(r->element[i]), replyText(r->element[i + 1])});
+            }
+        } else if (t == "list") {
+            for (std::size_t i = 0; i < r->elements; ++i) {
+                out.entries.push_back({std::to_string(i), replyText(r->element[i])});
+            }
+        } else if (t == "set") {
+            for (std::size_t i = 0; i < r->elements; ++i) {
+                out.entries.push_back({"", replyText(r->element[i])});
+            }
+        } else {   // string
+            out.entries.push_back({"", replyText(r)});
+        }
+        freeReplyObject(r);
+        redisReply* tr = commandArgv({"TTL", key}, error);
+        if (tr) {
+            out.ttl = tr->integer;
+            freeReplyObject(tr);
+        }
+        return true;
+    }
+
+    // 写键值 + TTL：string→SET；hash→HDEL removed + HSET 现字段；ttlChanged 时 EXPIRE(>0)/PERSIST。
+    bool redisSave(const std::string& database, const std::string& key, const RedisValue& v,
+                   const std::vector<std::string>& removed, bool ttlChanged,
+                   std::string& error) override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!ctx_) {
+            error = "not connected";
+            return false;
+        }
+        if (!selectDb(parseDb(database), error)) {
+            return false;
+        }
+        if (v.type == "string") {
+            const std::string val = v.entries.empty() ? "" : v.entries[0].value;
+            redisReply* r = commandArgv({"SET", key, val}, error);
+            if (!r) {
+                return false;
+            }
+            freeReplyObject(r);
+        } else if (v.type == "hash") {
+            for (const std::string& field : removed) {
+                redisReply* r = commandArgv({"HDEL", key, field}, error);
+                if (!r) {
+                    return false;
+                }
+                freeReplyObject(r);
+            }
+            std::vector<std::string> args = {"HSET", key};
+            for (const RedisEntry& e : v.entries) {
+                args.push_back(e.name);
+                args.push_back(e.value);
+            }
+            redisReply* r = commandArgv(args, error);
+            if (!r) {
+                return false;
+            }
+            freeReplyObject(r);
+        } else {
+            error = "暂不支持写入该类型: " + v.type;
+            return false;
+        }
+        if (ttlChanged) {
+            std::vector<std::string> targs =
+                v.ttl > 0 ? std::vector<std::string>{"EXPIRE", key, std::to_string(v.ttl)}
+                          : std::vector<std::string>{"PERSIST", key};
+            redisReply* r = commandArgv(targs, error);
+            if (!r) {
+                return false;
+            }
+            freeReplyObject(r);
+        }
+        return true;
+    }
+
     bool tableKey(const TableInfo&, TableKey& key, std::string&) override {
         key = TableKey{};   // 键值只读展示，不参与行编辑
         return true;

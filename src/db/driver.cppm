@@ -52,6 +52,31 @@ struct IDbDriver {
         return false;
     }
 
+    // 读 Redis 键值 + TTL（仅 Redis 驱动支持，其它驱动默认失败）。
+    [[nodiscard]] virtual bool redisValue(const std::string& database, const std::string& key,
+                                          RedisValue& out, std::string& error) {
+        (void)database;
+        (void)key;
+        (void)out;
+        error = "该驱动不支持 Redis 值读取";
+        return false;
+    }
+
+    // 写 Redis 键值 + TTL：ttlChanged=true 时按 v.ttl 设 TTL（>0 EXPIRE / <=0 PERSIST）；
+    // removed 为要删除的 hash 字段。
+    [[nodiscard]] virtual bool redisSave(const std::string& database, const std::string& key,
+                                         const RedisValue& v,
+                                         const std::vector<std::string>& removed,
+                                         bool ttlChanged, std::string& error) {
+        (void)database;
+        (void)key;
+        (void)v;
+        (void)removed;
+        (void)ttlChanged;
+        error = "该驱动不支持 Redis 值写入";
+        return false;
+    }
+
     // 查单表主键；无主键时（SQLite 可用 rowid 时返回 {"rowid"} + hidden）返回空列 = 只读。
     [[nodiscard]] virtual bool tableKey(const TableInfo& t, TableKey& key, std::string& error) = 0;
 
