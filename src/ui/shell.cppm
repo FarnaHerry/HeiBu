@@ -177,7 +177,7 @@ inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, 
             S().pageSizeMenuOpen = true;
             S().pageSizeMenuTabId = tabId;
             S().pageSizeMenuX = sx;
-            S().pageSizeMenuY = y + 30.0f;
+            S().pageSizeMenuY = y - 140.0f;   // 上拉：菜单在分页栏上方，与导出菜单一致
             app::requestUpdate();
         })
         .build();
