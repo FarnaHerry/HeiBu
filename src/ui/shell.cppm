@@ -177,7 +177,7 @@ inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, 
             S().pageSizeMenuOpen = true;
             S().pageSizeMenuTabId = tabId;
             S().pageSizeMenuX = sx;
-            S().pageSizeMenuY = y - 140.0f;   // 上拉：菜单在分页栏上方，与导出菜单一致
+            S().pageSizeMenuY = y + 4.0f;   // 附着在按钮顶，实际位置由菜单组件按 item 数计算
             app::requestUpdate();
         })
         .build();
@@ -190,7 +190,8 @@ inline void composePaginationBar(eui::Ui& ui, const Tab& tab, float x, float y, 
         .onClick([ex, y] {
             S().exportMenuOpen = true;
             S().exportMenuX = ex;
-            S().exportMenuY = y - 140.0f;   // 上拉：菜单在分页栏上方
+            S().exportMenuY = y + 4.0f;   // 附着在按钮顶，上拉
+            S().exportMenuUp = true;
             app::requestUpdate();
         })
         .build();
@@ -259,10 +260,11 @@ inline void composeQueryTab(eui::Ui& ui, const Tab& tab, float x, float y, float
     components::button(ui, "export." + tab.id)
         .position(x + 92.0f, y + 5.0f).size(72.0f, 26.0f)
         .text("导出 ▾").fontSize(12.0f).theme(t, false)
-        .onClick([ex = x + 92.0f, ey = y + 5.0f + 30.0f] {
+        .onClick([ex = x + 92.0f, ey = y + 5.0f + 26.0f] {
             S().exportMenuOpen = true;
             S().exportMenuX = ex;
-            S().exportMenuY = ey;
+            S().exportMenuY = ey;   // 附着在按钮底，下拉
+            S().exportMenuUp = false;
             app::requestUpdate();
         })
         .build();
@@ -509,18 +511,21 @@ inline void composeContextMenu(eui::Ui& ui, float w, float h, const components::
         .build();
 }
 
-// 分页大小下拉菜单。
+// 分页大小上拉菜单：高度按 item 数动态算，底边贴住按钮顶。
 inline void composePageSizeMenu(eui::Ui& ui, float w, float h,
                                 const components::theme::ThemeColorTokens& t) {
     if (!S().pageSizeMenuOpen) {
         return;
     }
     std::vector<std::string> items = {"50", "100", "200", "500"};
+    const float itemH = 28.0f;
+    const float inset = t.metrics.spacing.small;
+    const float menuH = itemH * static_cast<float>(items.size()) + inset * 2.0f;
     components::contextMenu(ui, "page.size.menu")
         .open(true)
         .screen(w, h)
-        .position(S().pageSizeMenuX, S().pageSizeMenuY)
-        .size(120.0f, 28.0f)
+        .position(S().pageSizeMenuX, S().pageSizeMenuY - menuH)
+        .size(120.0f, itemH)
         .items(items)
         .theme(t)
         .zIndex(111)
@@ -626,17 +631,21 @@ inline void composeTabContextMenu(eui::Ui& ui, float w, float h,
         .build();
 }
 
-// 导出格式上拉菜单：从数据页右下角导出按钮向上弹出。
+// 导出格式菜单：高度按 item 数动态算；上拉贴按钮顶、下拉贴按钮底。
 inline void composeExportMenu(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
     if (!S().exportMenuOpen) {
         return;
     }
     std::vector<std::string> items = {"CSV (.csv)", "TSV (.tsv)", "JSON (.json)", "SQL INSERT (.sql)"};
+    const float itemH = 30.0f;
+    const float inset = t.metrics.spacing.small;
+    const float menuH = itemH * static_cast<float>(items.size()) + inset * 2.0f;
+    const float my = S().exportMenuUp ? (S().exportMenuY - menuH) : S().exportMenuY;
     components::contextMenu(ui, "export.menu")
         .open(true)
         .screen(w, h)
-        .position(S().exportMenuX, S().exportMenuY)   // 各导出按钮已存好上拉/下拉的最终坐标
-        .size(140.0f, 30.0f)
+        .position(S().exportMenuX, my)
+        .size(140.0f, itemH)
         .items(items)
         .theme(t)
         .zIndex(113)

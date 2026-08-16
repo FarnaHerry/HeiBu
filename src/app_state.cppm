@@ -127,10 +127,11 @@ struct AppState {
     // 勾销（删除行）确认框
     bool showDeleteConfirm = false;
 
-    // 导出格式上拉菜单（数据页右下角导出按钮）
+    // 导出格式菜单（数据页右下角 / 查询工具栏）
     bool exportMenuOpen = false;
     float exportMenuX = 0.0f;
-    float exportMenuY = 0.0f;
+    float exportMenuY = 0.0f;    // 菜单附着边缘 Y：上拉=按钮顶，下拉=按钮底
+    bool exportMenuUp = true;    // 上拉向上弹（分页栏底部）；下拉向下（查询工具栏）
 };
 
 inline AppState& S() {
