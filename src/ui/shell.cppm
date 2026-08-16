@@ -521,10 +521,11 @@ inline void composePageSizeMenu(eui::Ui& ui, float w, float h,
     const float itemH = 28.0f;
     const float inset = t.metrics.spacing.small;
     const float menuH = itemH * static_cast<float>(items.size()) + inset * 2.0f;
+    const float gap = 6.0f;   // 与按钮的基础间距
     components::contextMenu(ui, "page.size.menu")
         .open(true)
         .screen(w, h)
-        .position(S().pageSizeMenuX, S().pageSizeMenuY - menuH)
+        .position(S().pageSizeMenuX, S().pageSizeMenuY - menuH - gap)
         .size(120.0f, itemH)
         .items(items)
         .theme(t)
@@ -640,7 +641,9 @@ inline void composeExportMenu(eui::Ui& ui, float w, float h, const components::t
     const float itemH = 30.0f;
     const float inset = t.metrics.spacing.small;
     const float menuH = itemH * static_cast<float>(items.size()) + inset * 2.0f;
-    const float my = S().exportMenuUp ? (S().exportMenuY - menuH) : S().exportMenuY;
+    const float gap = 6.0f;   // 与按钮的基础间距
+    const float my = S().exportMenuUp ? (S().exportMenuY - menuH - gap)
+                                      : (S().exportMenuY + gap);
     components::contextMenu(ui, "export.menu")
         .open(true)
         .screen(w, h)
