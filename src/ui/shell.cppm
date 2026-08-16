@@ -12,6 +12,7 @@ import heibu.ui.dialogs;
 import heibu.ui.editor;
 import heibu.ui.grid;
 import heibu.ui.redis_editor;
+import heibu.ui.redis_sidebar;
 import heibu.ui.settings;
 import heibu.ui.sidebar;
 import heibu.ui.theme;
@@ -403,7 +404,9 @@ inline float composeTabstrip(eui::Ui& ui, float x, float y, float w,
 }
 
 inline void composeContent(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
-    const float cx = kIslandGap + kSidebarW + kIslandGap;
+    // Redis 二级侧边栏可见时，内容区右移让位。
+    const float cx = kIslandGap + kSidebarW + kIslandGap +
+                     (S().redisSidebarVisible ? kRedisSidebarW + kIslandGap : 0.0f);
     const float cy = kIslandGap;
     const float cw = w - cx - kIslandGap;
     const float ch = h - kIslandGap * 2.0f;
@@ -691,6 +694,10 @@ inline void composeShell(eui::Ui& ui, const eui::Screen& screen) {
     ui.rect("root.bg").position(0.0f, 0.0f).size(w, h).color(t.background);
 
     composeSidebar(ui, w, h, t);
+    if (S().redisSidebarVisible) {
+        composeRedisSidebar(ui, kIslandGap + kSidebarW + kIslandGap, kIslandGap,
+                            kRedisSidebarW, h - kIslandGap * 2.0f, t);
+    }
     composeContent(ui, w, h, t);
     composeConnDialog(ui, w, h, t);
     composeDeleteConfirm(ui, w, h, t);

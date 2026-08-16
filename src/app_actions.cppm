@@ -337,16 +337,55 @@ inline void openTableTab(const std::string& connId, const std::string& database,
     app::requestUpdate();
 }
 
-// 切换 Redis 键树中间段的展开状态。
+// 切换 Redis 键树中间段的展开状态（展开键含分隔符，切换分隔符后不串台）。
 inline void toggleRedisPath(const std::string& connId, const std::string& database,
                             const std::string& path) {
-    const std::string key = connId + "\n" + database + "\n" + path;
+    const std::string key = connId + "\n" + database + "\n" + S().redisSeparator + "\n" + path;
     auto& s = S().expandedRedisPaths;
     if (s.count(key)) {
         s.erase(key);
     } else {
         s.insert(key);
     }
+    app::requestUpdate();
+}
+
+// 打开 Redis 二级侧边栏：加载该 db 的键、选中状态、显示侧边栏。
+inline void openRedisDb(const std::string& connId, const std::string& database) {
+    AppState& s = S();
+    s.activeConnectionId = connId;
+    auto driver = ensureSession(connId);
+    if (!driver) {
+        app::requestUpdate();
+        return;
+    }
+    auto& tl = s.tableLists[connId][database];
+    if (tl.empty()) {
+        std::vector<TableInfo> tables;
+        std::string err;
+        if (driver->listTables(database, tables, err)) {
+            tl = std::move(tables);
+        } else {
+            s.statusMessage = err;
+        }
+    }
+    s.redisSidebarVisible = true;
+    s.redisSidebarConnId = connId;
+    s.redisSidebarDb = database;
+    selectSidebar(SidebarSelection::Kind::Database, connId, database);
+    app::requestUpdate();
+}
+
+// 切换 Redis 键树分隔符；重设分隔符后清空展开路径。
+inline void setRedisSeparator(const std::string& sep) {
+    S().redisSeparator = sep;
+    S().expandedRedisPaths.clear();
+    app::requestUpdate();
+}
+
+// 隐藏 Redis 二级侧边栏。
+inline void closeRedisSidebar() {
+    S().redisSidebarVisible = false;
     app::requestUpdate();
 }
 

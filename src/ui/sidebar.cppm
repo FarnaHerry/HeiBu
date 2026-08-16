@@ -14,7 +14,7 @@ import heibu.ui.theme;
 export namespace heibu::ui {
 
 struct SidebarRow {
-    enum class Kind { Conn, Database, Category, Object, RedisFolder } kind;
+    enum class Kind { Conn, Database, Category, Object } kind;
     std::string connId;
     std::string database;   // Database / Category / Object 行专用
     std::string name;       // Object 行：对象名
@@ -22,7 +22,6 @@ struct SidebarRow {
     std::string type;       // Object 行：对象类型；Category 行：分类类型
     bool expanded;
     bool active;
-    int depth = 0;                                          // Redis 键树缩进深度
     core::Color iconColor{0.0f, 0.0f, 0.0f, 0.0f};   // 连接行：类型图标颜色
 };
 
@@ -102,7 +101,7 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                 label += " · " + conn.driver;
             }
             rows.push_back(SidebarRow{SidebarRow::Kind::Conn, conn.id, "", "", label, "",
-                                      expanded, connActive, 0, connectionIconColor(conn.driver)});
+                                      expanded, connActive, connectionIconColor(conn.driver)});
             if (expanded) {
                 auto dit = s.databaseLists.find(conn.id);
                 if (dit != s.databaseLists.end()) {
@@ -123,47 +122,8 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                                     objs = tdit->second;
                                 }
                             }
-                            if (conn.driver == "redis") {
-                                // Redis：冒号分组的键树，递归展平「展开路径」上的节点。
-                                std::function<void(const std::string&, int)> walk;
-                                walk = [&](const std::string& prefix, int depth) {
-                                    std::map<std::string, bool> folders;      // 段 -> 还有更深
-                                    std::map<std::string, std::string> leaves; // 段 -> 类型
-                                    for (const TableInfo& o : objs) {
-                                        if (!prefix.empty() && o.name.rfind(prefix + ":", 0) != 0) {
-                                            continue;
-                                        }
-                                        const std::string rest =
-                                            prefix.empty() ? o.name : o.name.substr(prefix.size() + 1);
-                                        const std::size_t colon = rest.find(':');
-                                        if (colon == std::string::npos) {
-                                            leaves[rest] = o.type;
-                                        } else if (colon > 0) {   // 跳过空段（a::b）
-                                            folders[rest.substr(0, colon)] = true;
-                                        }
-                                    }
-                                    for (const auto& [seg, isF] : folders) {
-                                        const std::string childPath =
-                                            prefix.empty() ? seg : prefix + ":" + seg;
-                                        const std::string ek = conn.id + "\n" + db + "\n" + childPath;
-                                        const bool expanded = s.expandedRedisPaths.count(ek) > 0;
-                                        rows.push_back(SidebarRow{SidebarRow::Kind::RedisFolder,
-                                                                  conn.id, db, childPath, seg, "",
-                                                                  expanded, false, depth});
-                                        if (expanded) {
-                                            walk(childPath, depth + 1);
-                                        }
-                                    }
-                                    for (const auto& [seg, type] : leaves) {
-                                        const std::string full =
-                                            prefix.empty() ? seg : prefix + ":" + seg;
-                                        rows.push_back(SidebarRow{SidebarRow::Kind::Object, conn.id,
-                                                                  db, full, seg, type, false, false,
-                                                                  depth});
-                                    }
-                                };
-                                walk("", 0);
-                            } else {
+                            // Redis 键树在二级侧边栏，主侧边栏只列 db，不在此展开。
+                            if (conn.driver != "redis") {
                                 const std::size_t ncats =
                                     sizeof(kSqlCategories) / sizeof(kSqlCategories[0]);
                                 for (std::size_t ci = 0; ci < ncats; ++ci) {
@@ -245,7 +205,18 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                                 r.label, false, theme,
                                 [connId = r.connId, db = r.database] {
                                     heibu::selectSidebar(SidebarSelection::Kind::Database, connId, db);
-                                    heibu::toggleDatabase(connId, db);
+                                    bool isRedis = false;
+                                    for (const ConnectionInfo& c : S().connections) {
+                                        if (c.id == connId) {
+                                            isRedis = c.driver == "redis";
+                                            break;
+                                        }
+                                    }
+                                    if (isRedis) {
+                                        heibu::openRedisDb(connId, db);   // 打开二级侧边栏键树
+                                    } else {
+                                        heibu::toggleDatabase(connId, db);
+                                    }
                                 },
                                 r.expanded ? "▾ " : "▸ ",
                                 [connId = r.connId, db = r.database](const core::PointerEvent& e,
@@ -266,21 +237,9 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                                     heibu::toggleCategory(connId, db, type);
                                 },
                                 r.expanded ? "▾ " : "▸ ", nullptr);
-            } else if (r.kind == SidebarRow::Kind::RedisFolder) {
-                const float indent = static_cast<float>(16 + r.depth * 16);
-                drawSidebarItem(ui, "rf." + r.connId + "." + r.database + "." + r.name,
-                                indent, 0.0f, w2 - indent, h2, r.label, false, theme,
-                                [connId = r.connId, db = r.database, path = r.name] {
-                                    heibu::toggleRedisPath(connId, db, path);
-                                },
-                                r.expanded ? "▾ " : "▸ ", nullptr);
             } else {
-                // Redis 叶子按深度缩进；SQL 对象固定 48。
-                const bool isRedisLeaf = r.type == "string" || r.type == "hash" ||
-                                         r.type == "list" || r.type == "set" || r.type == "zset";
-                const float indent = isRedisLeaf ? static_cast<float>(16 + r.depth * 16) : 48.0f;
                 drawSidebarItem(ui, "obj." + r.connId + "." + r.database + "." + r.name,
-                                indent, 0.0f, w2 - indent, h2, r.label, false, theme,
+                                48.0f, 0.0f, w2 - 48.0f, h2, r.label, false, theme,
                                 [connId = r.connId, db = r.database, name = r.name, type = r.type] {
                                     heibu::selectSidebar(SidebarSelection::Kind::Object, connId, db, name, type);
                                     if (type == "table" || type == "view") {

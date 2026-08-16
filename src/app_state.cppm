@@ -80,7 +80,14 @@ struct AppState {
     std::set<std::string> expandedConnections;                               // 展开的连接 id
     std::set<std::string> expandedDatabases;                                 // 展开的数据库（connId + "\n" + database）
     std::set<std::string> expandedCategories;                                // 展开的对象分类（connId + "\n" + database + "\n" + type）
-    std::set<std::string> expandedRedisPaths;                                // 展开的 Redis 键树路径（connId + "\n" + db + "\n" + path）
+    std::set<std::string> expandedRedisPaths;                                // 展开的 Redis 键树路径（connId + "\n" + db + "\n" + 分隔符 + "\n" + path）
+
+    // Redis 二级侧边栏（主侧边栏与内容区之间，独立键树）
+    bool redisSidebarVisible = false;
+    std::string redisSidebarConnId;
+    std::string redisSidebarDb;
+    std::string redisSeparator = ":";   // 键路径分隔符（: / . - _ 等）
+    float redisSidebarScrollY = 0.0f;
 
     std::vector<std::string> openTabIds;       // 标签条顺序
     std::unordered_map<std::string, Tab> tabs;

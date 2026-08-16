@@ -15,6 +15,7 @@ inline constexpr float kDesignH = 760.0f;    // 设计逻辑窗口高
 
 // 布局常量（设计逻辑像素）
 inline constexpr float kSidebarW = 280.0f;   // 大侧边栏：标签 + 命籍/卷宗选择器
+inline constexpr float kRedisSidebarW = 220.0f;   // Redis 二级侧边栏：键树
 inline constexpr float kStatusH = 24.0f;
 inline constexpr float kIslandGap = 8.0f;    // 岛卡片与窗口边缘的间距
 inline constexpr float kIslandRadius = 10.0f;
