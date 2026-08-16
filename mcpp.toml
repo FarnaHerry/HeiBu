@@ -1,0 +1,23 @@
+[package]
+name        = "Heibu"
+version     = "0.1.0"
+description = "黑簿 — 直翻阅、批改各家数据库的那支笔 (a mini-DBeaver, eui-neo + SQLite)"
+license     = "Apache-2.0"
+
+[dependencies.compat]
+eui-neo = "0.5.6"
+sqlite3 = "3.45.3"
+yyjson  = "0.12.0"   # 连接配置 JSON 读写（store/connections.h）
+nanodbc = "2.14.0"
+hiredis = "1.2.0"    # Redis 客户端（compat.hiredis），接 Redis
+
+[build]
+# eui_neo.h pulls windows.h into consumer TUs on Windows; the descriptor's
+# NOMINMAX is package-private, so we need our own.
+# WIN32_LEAN_AND_MEAN 阻止 windows.h 顺带引入旧 winsock.h，避免与 hiredis 的 winsock2.h 冲突。
+defines = ["NOMINMAX", "WIN32_LEAN_AND_MEAN"]
+# 头文件互引统一用 src 相对路径（如 #include "ui/shell.h" / "db/driver.h"）。
+include_dirs = ["src"]
+# 加速编译（mcpp 2026.8.15.x）：模块 BMI 一发布 import 它的编译单元就并行启动，
+# 不必等整个模块编译完。C++23 模块项目收益明显。
+bmi_schedule = "on"
