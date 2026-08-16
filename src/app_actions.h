@@ -12,7 +12,6 @@
 #include "store/save_dialog.h"
 
 #include <algorithm>
-#include <fstream>
 
 namespace heibu {
 
@@ -53,12 +52,10 @@ inline void exportCsv() {
         return;   // 用户取消
     }
     const std::string csv = resultToCsv(grid);
-    std::ofstream out(path, std::ios::binary);
-    if (!out) {
+    if (!writeFileUtf8(path, csv)) {
         showToast("导出失败", "无法写入: " + path);
         return;
     }
-    out << csv;
     showToast("导出成功", std::to_string(grid.rows.size()) + " 行已保存到 " + path);
 }
 
