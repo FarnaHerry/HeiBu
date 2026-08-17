@@ -9,7 +9,7 @@ import heibu.os_theme;
 
 export namespace heibu {
 
-enum class TabKind { Table, Query, Settings, Redis };
+enum class TabKind { Table, Query, Settings, RedisDb };
 
 struct CellRef {
     std::int64_t row;
@@ -62,6 +62,10 @@ struct Tab {
     std::string redisTtlInput;            // TTL 输入缓冲（空=保持当前）
     std::int64_t redisTtlCurrent = -1;    // 当前 TTL（展示用）
     bool redisDirty = false;              // 有未保存改动
+
+    // RedisDb 标签（树+值同框）：redisKey 为空 = 未选中键。
+    std::string redisSeparator = ":";     // 键路径分隔符（: / . - _ 等），随标签走
+    float redisTreeScrollY = 0.0f;        // 键树 virtualList 偏移
 };
 
 // 新建表对话框里的一个字段（列）。
@@ -81,13 +85,6 @@ struct AppState {
     std::set<std::string> expandedDatabases;                                 // 展开的数据库（connId + "\n" + database）
     std::set<std::string> expandedCategories;                                // 展开的对象分类（connId + "\n" + database + "\n" + type）
     std::set<std::string> expandedRedisPaths;                                // 展开的 Redis 键树路径（connId + "\n" + db + "\n" + 分隔符 + "\n" + path）
-
-    // Redis 二级侧边栏（主侧边栏与内容区之间，独立键树）
-    bool redisSidebarVisible = false;
-    std::string redisSidebarConnId;
-    std::string redisSidebarDb;
-    std::string redisSeparator = ":";   // 键路径分隔符（: / . - _ 等）
-    float redisSidebarScrollY = 0.0f;
 
     std::vector<std::string> openTabIds;       // 标签条顺序
     std::unordered_map<std::string, Tab> tabs;

@@ -94,13 +94,15 @@ inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, 
     const float headerH = 26.0f;
     const float rowH = 24.0f;
     const float hScrollH = 12.0f;   // 横向滚动条条高（含上下留白）
+    const float rowNumW = 46.0f;    // 最左侧行号列宽（固定，不随横向滚动）
 
-    // 横向滚动：所有列宽之和超出视口才需要滚动条。
+    // 横向滚动：数据列宽之和超出「除行号外的可视宽」才需要滚动条。
     float totalW = 0.0f;
     for (const Column& col : grid.columns) {
         totalW += col.width;
     }
-    const float maxScrollX = std::max(0.0f, totalW - w);
+    const float dataW = std::max(0.0f, w - rowNumW);
+    const float maxScrollX = std::max(0.0f, totalW - dataW);
     const bool needHScroll = maxScrollX > 0.0f;
     const float listH = h - headerH - (needHScroll ? hScrollH : 0.0f);
     const core::Color gridLineColor = components::theme::withOpacity(t.border, t.dark ? 0.22f : 0.30f);
@@ -111,14 +113,28 @@ inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, 
         .size(w, headerH)
         .clip()
         .content([&] {
-            float cx = 0.0f;
+            // 固定行号列（不随横向滚动）
+            ui.rect("grid." + tab.id + ".h.rn")
+                .position(0.0f, 0.0f).size(rowNumW, headerH)
+                .color(components::theme::withOpacity(t.surface, 0.55f));
+            ui.text("grid." + tab.id + ".ht.rn")
+                .position(0.0f, 0.0f).size(rowNumW, headerH)
+                .text("#").fontSize(11.0f).color(t.border)
+                .horizontalAlign(core::HorizontalAlign::Center)
+                .verticalAlign(core::VerticalAlign::Center)
+                .build();
+            ui.rect("grid." + tab.id + ".hv.rn")
+                .position(rowNumW - 1.0f, 0.0f).size(1.0f, headerH)
+                .color(gridLineColor);
+
+            float cx = rowNumW;
             for (std::size_t c = 0; c < grid.columns.size(); ++c) {
                 const float px = cx - tab.scrollX;
                 const float cw = grid.columns[c].width;
                 ui.rect("grid." + tab.id + ".h." + std::to_string(c))
                     .position(px, 0.0f)
                     .size(cw, headerH)
-                    .color(t.surface);
+                    .color(components::theme::withOpacity(t.surface, 0.55f));
                 ui.text("grid." + tab.id + ".ht." + std::to_string(c))
                     .position(px + 4.0f, 6.0f)
                     .text(ellipsize(grid.columns[c].name, cw - 10.0f, 12.0f))
@@ -161,6 +177,8 @@ inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, 
     const core::Color nullColor = t.border;
     const core::Color selectColor = t.surfaceHover;
     const core::Color editBorder = t.primary;
+    const core::Color rowNumBgColor =
+        components::theme::withOpacity(t.surfaceHover, t.dark ? 0.55f : 0.65f);
     const components::theme::ThemeColorTokens theme = t;
 
     components::virtualList(ui, "grid." + tab.id + ".list")
@@ -176,8 +194,9 @@ inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, 
                 it->second.scrollY = value;
             }
         })
-        .row([tabId, textColor, nullColor, selectColor, editBorder, gridLineColor, theme](
-                 eui::Ui& ui, const std::string& slotId, std::int64_t rowIdx, float, float rh) {
+        .row([tabId, rowNumW, rowNumBgColor, textColor, nullColor, selectColor, editBorder,
+              gridLineColor, theme](eui::Ui& ui, const std::string& slotId, std::int64_t rowIdx,
+                                    float, float rh) {
             auto it = S().tabs.find(tabId);
             if (it == S().tabs.end() || !it->second.result) {
                 return;
@@ -191,7 +210,22 @@ inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, 
             const bool editable = grid.editable && !grid.keys.empty();
             const Tab& tabState = it->second;
 
-            float cx = 0.0f;
+            // 固定行号列
+            ui.rect(slotId + ".rn.bg")
+                .position(0.0f, 0.0f).size(rowNumW, rh)
+                .color(rowNumBgColor);
+            ui.text(slotId + ".rn.t")
+                .position(0.0f, 0.0f).size(rowNumW, rh)
+                .text(std::to_string(rowIdx + 1))
+                .fontSize(11.0f).color(nullColor)
+                .horizontalAlign(core::HorizontalAlign::Center)
+                .verticalAlign(core::VerticalAlign::Center)
+                .build();
+            ui.rect(slotId + ".rn.v")
+                .position(rowNumW - 1.0f, 0.0f).size(1.0f, rh)
+                .color(gridLineColor);
+
+            float cx = rowNumW;
             for (std::size_t c = 0; c < row.size() && c < grid.columns.size(); ++c) {
                 const float cellX = cx - scrollX;
                 const float cellW = grid.columns[c].width;
@@ -255,7 +289,7 @@ inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, 
     if (needHScroll) {
         const std::string sid = "grid." + tab.id + ".hscroll";
         const float thumbH = 4.0f;   // 滚动条粗细
-        const float thumbRatio = std::clamp(w / (w + maxScrollX), 0.08f, 1.0f);
+        const float thumbRatio = std::clamp(dataW / (dataW + maxScrollX), 0.08f, 1.0f);
         const float thumbW = std::max(24.0f, w * thumbRatio);
         const float value = std::clamp(tab.scrollX / maxScrollX, 0.0f, 1.0f);
         const float thumbY = (hScrollH - thumbH) * 0.5f;
@@ -299,6 +333,13 @@ inline void composeGrid(eui::Ui& ui, const Tab& tab, float x, float y, float w, 
             })
             .build();
     }
+
+    // 表格四周边框线：表头 + 数据行 + 滚动条整体包一圈。
+    const core::Color borderColor = components::theme::withOpacity(t.border, t.dark ? 0.45f : 0.60f);
+    ui.rect("grid." + tab.id + ".b.t").position(x, y).size(w, 1.0f).color(borderColor).build();
+    ui.rect("grid." + tab.id + ".b.b").position(x, y + h - 1.0f).size(w, 1.0f).color(borderColor).build();
+    ui.rect("grid." + tab.id + ".b.l").position(x, y).size(1.0f, h).color(borderColor).build();
+    ui.rect("grid." + tab.id + ".b.r").position(x + w - 1.0f, y).size(1.0f, h).color(borderColor).build();
 }
 
 } // namespace heibu::ui

@@ -339,8 +339,8 @@ inline void openTableTab(const std::string& connId, const std::string& database,
 
 // 切换 Redis 键树中间段的展开状态（展开键含分隔符，切换分隔符后不串台）。
 inline void toggleRedisPath(const std::string& connId, const std::string& database,
-                            const std::string& path) {
-    const std::string key = connId + "\n" + database + "\n" + S().redisSeparator + "\n" + path;
+                            const std::string& sep, const std::string& path) {
+    const std::string key = connId + "\n" + database + "\n" + sep + "\n" + path;
     auto& s = S().expandedRedisPaths;
     if (s.count(key)) {
         s.erase(key);
@@ -350,7 +350,7 @@ inline void toggleRedisPath(const std::string& connId, const std::string& databa
     app::requestUpdate();
 }
 
-// 打开 Redis 二级侧边栏：加载该 db 的键、选中状态、显示侧边栏。
+// 打开 Redis 库标签：键树 + 值编辑器同框，与设置/表标签统一，仅类型不同。
 inline void openRedisDb(const std::string& connId, const std::string& database) {
     AppState& s = S();
     s.activeConnectionId = connId;
@@ -359,6 +359,17 @@ inline void openRedisDb(const std::string& connId, const std::string& database) 
         app::requestUpdate();
         return;
     }
+    // 该库已有标签 → 直接激活（唤醒）。
+    for (const std::string& tabId : s.openTabIds) {
+        auto it = s.tabs.find(tabId);
+        if (it != s.tabs.end() && it->second.kind == TabKind::RedisDb &&
+            it->second.connectionId == connId && it->second.database == database) {
+            s.activeTabId = tabId;
+            app::requestUpdate();
+            return;
+        }
+    }
+    // 首次打开：加载键列表。
     auto& tl = s.tableLists[connId][database];
     if (tl.empty()) {
         std::vector<TableInfo> tables;
@@ -369,47 +380,69 @@ inline void openRedisDb(const std::string& connId, const std::string& database) 
             s.statusMessage = err;
         }
     }
-    s.redisSidebarVisible = true;
-    s.redisSidebarConnId = connId;
-    s.redisSidebarDb = database;
+    Tab tab;
+    tab.id = newId();
+    tab.kind = TabKind::RedisDb;
+    tab.connectionId = connId;
+    tab.database = database;
+    tab.title = "Redis: " + database;
+    tab.redisKey.clear();             // 初始未选中键
+    const std::string tabId = tab.id;
+    s.tabs[tabId] = std::move(tab);
+    s.openTabIds.push_back(tabId);
+    s.activeTabId = tabId;
     selectSidebar(SidebarSelection::Kind::Database, connId, database);
     app::requestUpdate();
 }
 
-// 切换 Redis 键树分隔符；重设分隔符后清空展开路径。
-inline void setRedisSeparator(const std::string& sep) {
-    S().redisSeparator = sep;
-    S().expandedRedisPaths.clear();
+// 切换 RedisDb 标签的键树分隔符；旧分隔符下的展开路径全部作废。
+inline void setRedisSeparator(const std::string& tabId, const std::string& sep) {
+    AppState& s = S();
+    auto it = s.tabs.find(tabId);
+    if (it == s.tabs.end() || it->second.kind != TabKind::RedisDb) {
+        return;
+    }
+    it->second.redisSeparator = sep;
+    const std::string prefix = it->second.connectionId + "\n" + it->second.database + "\n";
+    for (auto k = s.expandedRedisPaths.begin(); k != s.expandedRedisPaths.end();) {
+        if (k->compare(0, prefix.size(), prefix) == 0) {
+            k = s.expandedRedisPaths.erase(k);
+        } else {
+            ++k;
+        }
+    }
     app::requestUpdate();
 }
 
-// 隐藏 Redis 二级侧边栏。
-inline void closeRedisSidebar() {
-    S().redisSidebarVisible = false;
-    app::requestUpdate();
-}
-
-// 打开 Redis 键值编辑器标签（可改值 + TTL）。
-inline void openRedisKey(const std::string& connId, const std::string& database,
-                         const std::string& key) {
-    auto driver = ensureSession(connId);
+// 在 RedisDb 标签内选中一个键：加载值到编辑区（key 为空 = 取消选择）。
+inline void selectRedisKey(const std::string& tabId, const std::string& key) {
+    auto it = S().tabs.find(tabId);
+    if (it == S().tabs.end() || it->second.kind != TabKind::RedisDb) {
+        return;
+    }
+    Tab& tab = it->second;
+    if (key.empty()) {
+        tab.redisKey.clear();
+        tab.redisType.clear();
+        tab.redisEntries.clear();
+        tab.redisRemoved.clear();
+        tab.redisTtlInput.clear();
+        tab.redisDirty = false;
+        app::requestUpdate();
+        return;
+    }
+    auto driver = ensureSession(tab.connectionId);
     if (!driver) {
         app::requestUpdate();
         return;
     }
     RedisValue v;
     std::string err;
-    if (!driver->redisValue(database, key, v, err)) {
-        S().statusMessage = std::string(L(StrId::Error)) + ": " + err;
+    if (!driver->redisValue(tab.database, key, v, err)) {
+        showToast("打开失败", err);
         app::requestUpdate();
         return;
     }
-    Tab tab;
-    tab.id = newId();
-    tab.kind = TabKind::Redis;
-    tab.connectionId = connId;
-    tab.database = database;
-    tab.title = key;
     tab.redisKey = key;
     tab.redisType = v.type;
     tab.redisEntries = std::move(v.entries);
@@ -417,10 +450,21 @@ inline void openRedisKey(const std::string& connId, const std::string& database,
     tab.redisTtlCurrent = v.ttl;
     tab.redisTtlInput.clear();
     tab.redisDirty = false;
-    S().tabs[tab.id] = std::move(tab);
-    S().openTabIds.push_back(tab.id);
-    S().activeTabId = tab.id;
     app::requestUpdate();
+}
+
+// 兼容入口：按 连接+库+键 打开（先确保 RedisDb 标签，再选中键）。
+inline void openRedisKey(const std::string& connId, const std::string& database,
+                         const std::string& key) {
+    openRedisDb(connId, database);
+    for (const std::string& tabId : S().openTabIds) {
+        auto it = S().tabs.find(tabId);
+        if (it != S().tabs.end() && it->second.kind == TabKind::RedisDb &&
+            it->second.connectionId == connId && it->second.database == database) {
+            selectRedisKey(tabId, key);
+            return;
+        }
+    }
 }
 
 // ── Redis 值编辑器动作 ─────────────────────────────────────────────────────
@@ -483,7 +527,7 @@ inline void updateRedisTtlInput(const std::string& tabId, const std::string& tex
 // 保存 Redis 键值 + TTL；成功重载当前值并清空 TTL 输入。
 inline void saveRedisKey(const std::string& tabId) {
     auto it = S().tabs.find(tabId);
-    if (it == S().tabs.end() || it->second.kind != TabKind::Redis) {
+    if (it == S().tabs.end() || it->second.kind != TabKind::RedisDb) {
         return;
     }
     Tab& tab = it->second;

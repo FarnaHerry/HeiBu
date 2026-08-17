@@ -121,6 +121,7 @@ inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::t
         .screen(w, h)
         .size(dlgW, dlgH)
         .theme(t)
+        .style(heibu::ui::dialogGlassStyle(t))
         .zIndex(100)
         .content([&] {
             ui.text("conn_dialog.title")
@@ -176,6 +177,7 @@ inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::t
                 components::button(ui, "conn_dialog.save")
                     .position(250.0f, 256.0f).size(88.0f, 32.0f)
                     .text(std::string(L(StrId::Save))).fontSize(13.0f).theme(t, true)
+                    .textColor(onPrimaryText(t))
                     .onClick([] { heibu::saveConnectionFromDialog(); })
                     .build();
                 components::button(ui, "conn_dialog.cancel")
@@ -236,6 +238,7 @@ inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::t
                 components::button(ui, "conn_dialog.save")
                     .position(250.0f, 350.0f).size(88.0f, 32.0f)
                     .text(std::string(L(StrId::Save))).fontSize(13.0f).theme(t, true)
+                    .textColor(onPrimaryText(t))
                     .onClick([] { heibu::saveConnectionFromDialog(); })
                     .build();
                 components::button(ui, "conn_dialog.cancel")
@@ -305,6 +308,7 @@ inline void composeConnDialog(eui::Ui& ui, float w, float h, const components::t
                 components::button(ui, "conn_dialog.save")
                     .position(250.0f, 402.0f).size(88.0f, 32.0f)
                     .text(std::string(L(StrId::Save))).fontSize(13.0f).theme(t, true)
+                    .textColor(onPrimaryText(t))
                     .onClick([] { heibu::saveConnectionFromDialog(); })
                     .build();
                 components::button(ui, "conn_dialog.cancel")
@@ -333,6 +337,7 @@ inline void composeCreateTableDialog(eui::Ui& ui, float w, float h,
         .screen(w, h)
         .size(460.0f, 460.0f)
         .theme(t)
+        .style(heibu::ui::dialogGlassStyle(t))
         .zIndex(102)
         .content([&] {
             ui.text("ct.title")
@@ -430,6 +435,7 @@ inline void composeDropTableDialog(eui::Ui& ui, float w, float h,
         .screen(w, h)
         .size(400.0f, 180.0f)
         .theme(t)
+        .style(heibu::ui::dialogGlassStyle(t))
         .zIndex(102)
         .title(std::string(L(StrId::DropTable)))
         .message(std::string(L(StrId::DropTableMsg)))

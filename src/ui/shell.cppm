@@ -12,7 +12,6 @@ import heibu.ui.dialogs;
 import heibu.ui.editor;
 import heibu.ui.grid;
 import heibu.ui.redis_editor;
-import heibu.ui.redis_sidebar;
 import heibu.ui.settings;
 import heibu.ui.sidebar;
 import heibu.ui.theme;
@@ -24,7 +23,8 @@ inline void composeTableActions(eui::Ui& ui, const Tab& tab, float x, float y, f
                                 const components::theme::ThemeColorTokens& t) {
     const std::string tabId = tab.id;
     const bool hasSel = tab.selected.has_value();
-    ui.rect("act." + tabId).position(x, y).size(w, 30.0f).color(panelColor(t));
+    ui.rect("act." + tabId).position(x, y).size(w, 30.0f)
+        .color(components::theme::withOpacity(panelColor(t), 0.55f));
     components::button(ui, "act.null." + tabId)
         .position(x + 8.0f, y + 3.0f).size(84.0f, 24.0f)
         .text(std::string(L(StrId::SetNull))).fontSize(12.0f).theme(t, false)
@@ -40,6 +40,7 @@ inline void composeTableActions(eui::Ui& ui, const Tab& tab, float x, float y, f
     components::button(ui, "act.add." + tabId)
         .position(x + 184.0f, y + 3.0f).size(84.0f, 24.0f)
         .text("＋ " + std::string(L(StrId::AddRow))).fontSize(12.0f).theme(t, true)
+        .textColor(onPrimaryText(t))
         .disabled(tab.dirty)
         .onClick([tabId] { heibu::startAddRow(tabId); })
         .build();
@@ -47,6 +48,7 @@ inline void composeTableActions(eui::Ui& ui, const Tab& tab, float x, float y, f
         components::button(ui, "act.commit." + tabId)
             .position(x + 272.0f, y + 3.0f).size(70.0f, 24.0f)
             .text(std::string(L(StrId::Save))).fontSize(12.0f).theme(t, true)
+            .textColor(onPrimaryText(t))
             .onClick([tabId] { heibu::commitChanges(tabId); })
             .build();
         components::button(ui, "act.cancel." + tabId)
@@ -66,6 +68,7 @@ inline void composeDeleteConfirm(eui::Ui& ui, float w, float h,
         .screen(w, h)
         .size(400.0f, 190.0f)
         .theme(t)
+        .style(dialogGlassStyle(t))
         .zIndex(101)
         .title(std::string(L(StrId::ConfirmDelete)))
         .message(std::string(L(StrId::ConfirmDeleteMsg)))
@@ -252,10 +255,12 @@ inline void composeQueryTab(eui::Ui& ui, const Tab& tab, float x, float y, float
     const float toolbarH = 36.0f;
     const float editorH = std::max(80.0f, (h - toolbarH) * 0.4f);
 
-    ui.rect("qtool." + tab.id).position(x, y).size(w, toolbarH).color(panelColor(t));
+    ui.rect("qtool." + tab.id).position(x, y).size(w, toolbarH)
+        .color(components::theme::withOpacity(panelColor(t), 0.55f));
     components::button(ui, "run." + tab.id)
         .position(x + 12.0f, y + 5.0f).size(72.0f, 26.0f)
         .text(std::string(L(StrId::Run))).fontSize(13.0f).theme(t, true)
+        .textColor(onPrimaryText(t))
         .onClick([tabId = tab.id] { heibu::runQueryTab(tabId); })
         .build();
     // 查询页无分页栏，导出按钮放工具栏（菜单下拉）
@@ -276,6 +281,17 @@ inline void composeQueryTab(eui::Ui& ui, const Tab& tab, float x, float y, float
 }
 
 // 标签条（内容卡片顶部）：打开标签 + 关闭 + 溢出时顶部横向滚动条。返回占用高度（含下方间距）。
+// 标签图标（Font Awesome 码点，随主题色）。
+inline unsigned int tabIcon(TabKind kind) {
+    switch (kind) {
+        case TabKind::Table:    return 0xF0CEu;   // fa-table
+        case TabKind::Query:    return 0xF120u;   // fa-terminal
+        case TabKind::Settings: return 0xF013u;   // fa-gear
+        case TabKind::RedisDb:  return 0xF1C0u;   // fa-database
+    }
+    return 0u;
+}
+
 inline float composeTabstrip(eui::Ui& ui, float x, float y, float w,
                              const components::theme::ThemeColorTokens& t) {
     const float tabH = 26.0f;
@@ -314,7 +330,8 @@ inline float composeTabstrip(eui::Ui& ui, float x, float y, float w,
                 const bool active = s.activeTabId && *s.activeTabId == tabId;
                 ui.rect("tab." + tabId + ".bg")
                     .position(tabX, 0.0f).size(tabW, tabH)
-                    .color(active ? t.surfaceActive : t.surface)
+                    .color(active ? components::theme::withOpacity(t.surfaceActive, 0.62f)
+                                  : components::theme::withOpacity(t.surface, 0.46f))
                     .radius(6.0f);
                 ui.rect("tab." + tabId + ".hit")
                     .position(tabX, 0.0f).size(tabW, tabH)
@@ -330,8 +347,18 @@ inline float composeTabstrip(eui::Ui& ui, float x, float y, float w,
                         S().tabCtxOpen = true;
                         app::requestUpdate();
                     });
+                if (const unsigned int ticon = tabIcon(it->second.kind); ticon != 0) {
+                    ui.text("tab." + tabId + ".icon")
+                        .position(tabX + 8.0f, 5.0f).size(16.0f, 16.0f)
+                        .icon(ticon)
+                        .fontSize(11.0f)
+                        .color(components::theme::withOpacity(t.text, 0.75f))
+                        .horizontalAlign(core::HorizontalAlign::Center)
+                        .verticalAlign(core::VerticalAlign::Center)
+                        .build();
+                }
                 ui.text("tab." + tabId + ".title")
-                    .position(tabX + 8.0f, 5.0f)
+                    .position(tabX + 26.0f, 5.0f)
                     .text(it->second.title)
                     .fontSize(12.0f)
                     .color(t.text);
@@ -404,9 +431,7 @@ inline float composeTabstrip(eui::Ui& ui, float x, float y, float w,
 }
 
 inline void composeContent(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
-    // Redis 二级侧边栏可见时，内容区右移让位。
-    const float cx = kIslandGap + kSidebarW + kIslandGap +
-                     (S().redisSidebarVisible ? kRedisSidebarW + kIslandGap : 0.0f);
+    const float cx = kIslandGap + kSidebarW + kIslandGap;
     const float cy = kIslandGap;
     const float cw = w - cx - kIslandGap;
     const float ch = h - kIslandGap * 2.0f;
@@ -423,16 +448,18 @@ inline void composeContent(eui::Ui& ui, float w, float h, const components::them
     const float ry = iy + tabH;
     const float rh = ih - tabH;
 
+    // 标签条下方分割横线，隔开下面的内容区域。
+    ui.rect("content.tabline")
+        .position(ix, ry - 1.0f).size(iw, 1.0f)
+        .color(components::theme::withOpacity(t.border, t.dark ? 0.30f : 0.45f))
+        .build();
+
     AppState& s = S();
     if (!s.activeTabId) {
-        ui.text("content.none").position(ix + 8.0f, ry + 8.0f)
-            .text(std::string(L(StrId::Ready))).fontSize(15.0f).color(t.text);
-        return;
+        return;   // 无活动标签：内容区留白，不显示「就绪」
     }
     auto it = s.tabs.find(*s.activeTabId);
     if (it == s.tabs.end()) {
-        ui.text("content.none").position(ix + 8.0f, ry + 8.0f)
-            .text(std::string(L(StrId::Ready))).fontSize(15.0f).color(t.text);
         return;
     }
     const Tab& tab = it->second;
@@ -440,8 +467,8 @@ inline void composeContent(eui::Ui& ui, float w, float h, const components::them
         composeSettings(ui, ix, ry, iw, rh, t);
     } else if (tab.kind == TabKind::Query) {
         composeQueryTab(ui, tab, ix, ry, iw, rh, t);
-    } else if (tab.kind == TabKind::Redis) {
-        composeRedisEditor(ui, tab, ix, ry, iw, rh, t);
+    } else if (tab.kind == TabKind::RedisDb) {
+        composeRedisTab(ui, tab, ix, ry, iw, rh, t);
     } else {
         composeResultArea(ui, tab, ix, ry, iw, rh, t);
     }
@@ -475,46 +502,46 @@ inline void composeContextMenu(eui::Ui& ui, float w, float h, const components::
         items = {std::string(L(StrId::NewQueryTab)), "打开命籍", std::string(L(StrId::Refresh)),
                  std::string(L(StrId::CloseConnection)), "删除命籍"};
     }
-    components::contextMenu(ui, "sidebar.ctx")
-        .open(true)
-        .screen(w, h)
-        .position(S().ctxX, S().ctxY)
-        .size(120.0f, 28.0f)
-        .items(items)
-        .theme(t)
-        .zIndex(110)
-        .onSelect([tableLevel, dbLevel, redisCtx](int idx) {
-            S().ctxMenuOpen = false;
-            if (tableLevel && redisCtx) {
-                switch (idx) {
-                    case 0: heibu::openRedisKey(S().ctxConnId, S().ctxDatabase, S().ctxTableName); break;
-                    case 1: heibu::refreshTables(S().ctxConnId); break;
-                }
-            } else if (tableLevel) {
-                switch (idx) {
-                    case 0: heibu::openTableProperties(S().ctxConnId, S().ctxDatabase, S().ctxTableName); break;
-                    case 1: heibu::openObjectDdl(S().ctxConnId, S().ctxDatabase, S().ctxTableName, "table"); break;
-                    case 2: heibu::requestDropTable(); break;
-                    case 3: heibu::refreshTables(S().ctxConnId); break;
-                }
-            } else if (dbLevel) {
-                switch (idx) {
-                    case 0: heibu::requestCreateTable(); break;
-                    case 1: heibu::openQueryTab(S().ctxConnId); break;
-                    case 2: heibu::refreshTables(S().ctxConnId); break;
-                }
-            } else {
-                switch (idx) {
-                    case 0: heibu::openQueryTab(S().ctxConnId); break;
-                    case 1: heibu::connectNow(S().ctxConnId); break;
-                    case 2: heibu::refreshTables(S().ctxConnId); break;
-                    case 3: heibu::closeConnection(S().ctxConnId); break;
-                    case 4: heibu::removeConnection(S().ctxConnId); break;
-                }
-            }
-        })
-        .onOpenChange([](bool open) { S().ctxMenuOpen = open; })
-        .build();
+    std::vector<GlassMenuItem> glassItems;
+    glassItems.reserve(items.size());
+    for (const std::string& s : items) {
+        glassItems.push_back({s, false});
+    }
+    composeGlassMenu(ui, "sidebar.ctx", w, h, S().ctxX, S().ctxY, 120.0f, 28.0f, 110,
+                     glassItems, t,
+                     [] {
+                         S().ctxMenuOpen = false;
+                         app::requestUpdate();
+                     },
+                     [tableLevel, dbLevel, redisCtx](int idx) {
+                         if (tableLevel && redisCtx) {
+                             switch (idx) {
+                                 case 0: heibu::openRedisKey(S().ctxConnId, S().ctxDatabase, S().ctxTableName); break;
+                                 case 1: heibu::refreshTables(S().ctxConnId); break;
+                             }
+                         } else if (tableLevel) {
+                             switch (idx) {
+                                 case 0: heibu::openTableProperties(S().ctxConnId, S().ctxDatabase, S().ctxTableName); break;
+                                 case 1: heibu::openObjectDdl(S().ctxConnId, S().ctxDatabase, S().ctxTableName, "table"); break;
+                                 case 2: heibu::requestDropTable(); break;
+                                 case 3: heibu::refreshTables(S().ctxConnId); break;
+                             }
+                         } else if (dbLevel) {
+                             switch (idx) {
+                                 case 0: heibu::requestCreateTable(); break;
+                                 case 1: heibu::openQueryTab(S().ctxConnId); break;
+                                 case 2: heibu::refreshTables(S().ctxConnId); break;
+                             }
+                         } else {
+                             switch (idx) {
+                                 case 0: heibu::openQueryTab(S().ctxConnId); break;
+                                 case 1: heibu::connectNow(S().ctxConnId); break;
+                                 case 2: heibu::refreshTables(S().ctxConnId); break;
+                                 case 3: heibu::closeConnection(S().ctxConnId); break;
+                                 case 4: heibu::removeConnection(S().ctxConnId); break;
+                             }
+                         }
+                     });
 }
 
 // 分页大小上拉菜单：高度按 item 数动态算，底边贴住按钮顶。
@@ -528,114 +555,53 @@ inline void composePageSizeMenu(eui::Ui& ui, float w, float h,
     const float inset = t.metrics.spacing.small;
     const float menuH = itemH * static_cast<float>(items.size()) + inset * 2.0f;
     const float gap = 6.0f;   // 与按钮的基础间距
-    components::contextMenu(ui, "page.size.menu")
-        .open(true)
-        .screen(w, h)
-        .position(S().pageSizeMenuX, S().pageSizeMenuY - menuH - gap)
-        .size(120.0f, itemH)
-        .items(items)
-        .theme(t)
-        .zIndex(111)
-        .onSelect([](int idx) {
-            const std::int64_t sizes[] = {50, 100, 200, 500};
-            S().pageSizeMenuOpen = false;
-            if (idx >= 0 && idx < 4) {
-                heibu::setPageSize(S().pageSizeMenuTabId, sizes[idx]);
-            }
-        })
-        .onOpenChange([](bool open) { S().pageSizeMenuOpen = open; })
-        .build();
+    const std::vector<GlassMenuItem> glassItems = {
+        {"50", false}, {"100", false}, {"200", false}, {"500", false},
+    };
+    composeGlassMenu(ui, "page.size.menu", w, h,
+                     S().pageSizeMenuX, S().pageSizeMenuY - menuH - gap,
+                     120.0f, itemH, 111, glassItems, t,
+                     [] {
+                         S().pageSizeMenuOpen = false;
+                         app::requestUpdate();
+                     },
+                     [](int idx) {
+                         const std::int64_t sizes[] = {50, 100, 200, 500};
+                         if (idx >= 0 && idx < 4) {
+                             heibu::setPageSize(S().pageSizeMenuTabId, sizes[idx]);
+                         }
+                     });
 }
 
-// 标签右键菜单（自定义）：含红色危险项「关闭所有标签」。
+// 标签右键菜单（毛玻璃）：含红色危险项「关闭所有标签」。
 inline void composeTabContextMenu(eui::Ui& ui, float w, float h,
                                   const components::theme::ThemeColorTokens& t) {
     if (!S().tabCtxOpen) {
         return;
     }
-    const std::string id = "tab.ctx";
-    const float itemH = 28.0f;
-    const float menuW = 150.0f;
-    const float inset = 6.0f;
-    const float sepGap = 5.0f;   // 分隔线占位
-    const float menuH = inset * 2.0f + itemH * 5.0f + sepGap;
-    const float x = std::clamp(S().tabCtxX, 8.0f, std::max(8.0f, w - menuW - 8.0f));
-    const float y = std::clamp(S().tabCtxY, 8.0f, std::max(8.0f, h - menuH - 8.0f));
-    const core::Color danger = {0.92f, 0.33f, 0.33f, 1.0f};
-    const core::Color idle{0.0f, 0.0f, 0.0f, 0.0f};
-    const core::Color shadow = t.dark ? core::Color{0.0f, 0.0f, 0.0f, 0.4f}
-                                      : core::Color{0.10f, 0.14f, 0.22f, 0.12f};
-
-    ui.stack(id)
-        .position(0.0f, 0.0f).size(w, h)
-        .zIndex(112)
-        .content([&] {
-            // 点击外部关闭
-            ui.rect(id + ".dismiss").size(w, h).color(idle)
-                .onClick([] {
-                    S().tabCtxOpen = false;
-                    app::requestUpdate();
-                })
-                .build();
-
-            ui.stack(id + ".menu")
-                .position(x, y).size(menuW, menuH)
-                .content([&] {
-                    ui.rect(id + ".bg").size(menuW, menuH)
-                        .color(t.surface).radius(12.0f)
-                        .border(1.0f, components::theme::withOpacity(t.border, 0.82f))
-                        .shadow(14.0f, 3.0f, shadow)
-                        .build();
-
-                    const struct {
-                        const char* text;
-                        bool danger;
-                    } items[] = {
-                        {"关闭标签", false},
-                        {"关闭其他标签", false},
-                        {"关闭左侧标签", false},
-                        {"关闭右侧标签", false},
-                        {"关闭所有标签", true},
-                    };
-                    float iy = inset;
-                    for (int i = 0; i < 5; ++i) {
-                        if (items[i].danger) {
-                            ui.rect(id + ".sep")
-                                .position(inset, iy).size(menuW - inset * 2.0f, 1.0f)
-                                .color(components::theme::withOpacity(t.border, 0.5f))
-                                .build();
-                            iy += sepGap;
-                        }
-                        const core::Color textColor = items[i].danger ? danger : t.text;
-                        ui.rect(id + ".item." + std::to_string(i))
-                            .position(inset, iy).size(menuW - inset * 2.0f, itemH)
-                            .states(idle, t.surfaceHover, t.surfaceActive)
-                            .radius(8.0f)
-                            .onClick([i] {
-                                const std::string tabId = S().tabCtxId;
-                                S().tabCtxOpen = false;
-                                switch (i) {
-                                    case 0: heibu::closeTab(tabId); break;
-                                    case 1: heibu::closeOtherTabs(tabId); break;
-                                    case 2: heibu::closeTabsToLeft(tabId); break;
-                                    case 3: heibu::closeTabsToRight(tabId); break;
-                                    case 4: heibu::closeAllTabs(); break;
-                                }
-                            })
-                            .build();
-                        ui.text(id + ".label." + std::to_string(i))
-                            .position(inset + 10.0f, iy).size(menuW - inset * 2.0f - 20.0f, itemH)
-                            .text(items[i].text)
-                            .fontSize(13.0f)
-                            .color(textColor)
-                            .verticalAlign(core::VerticalAlign::Center)
-                            .build();
-                        iy += itemH;
-                    }
-                })
-                .build();
-        })
-        .build();
+    const std::vector<GlassMenuItem> items = {
+        {"关闭标签", false},
+        {"关闭其他标签", false},
+        {"关闭左侧标签", false},
+        {"关闭右侧标签", false},
+        {"关闭所有标签", true},
+    };
+    composeGlassMenu(ui, "tab.ctx", w, h, S().tabCtxX, S().tabCtxY, 150.0f, 28.0f, 112,
+                     items, t,
+                     [] {
+                         S().tabCtxOpen = false;
+                         app::requestUpdate();
+                     },
+                     [](int i) {
+                         const std::string tabId = S().tabCtxId;
+                         switch (i) {
+                             case 0: heibu::closeTab(tabId); break;
+                             case 1: heibu::closeOtherTabs(tabId); break;
+                             case 2: heibu::closeTabsToLeft(tabId); break;
+                             case 3: heibu::closeTabsToRight(tabId); break;
+                             case 4: heibu::closeAllTabs(); break;
+                         }
+                     });
 }
 
 // 导出格式菜单：高度按 item 数动态算；上拉贴按钮顶、下拉贴按钮底。
@@ -650,23 +616,22 @@ inline void composeExportMenu(eui::Ui& ui, float w, float h, const components::t
     const float gap = 6.0f;   // 与按钮的基础间距
     const float my = S().exportMenuUp ? (S().exportMenuY - menuH - gap)
                                       : (S().exportMenuY + gap);
-    components::contextMenu(ui, "export.menu")
-        .open(true)
-        .screen(w, h)
-        .position(S().exportMenuX, my)
-        .size(140.0f, itemH)
-        .items(items)
-        .theme(t)
-        .zIndex(113)
-        .onSelect([](int idx) {
-            const char* fmts[] = {"csv", "tsv", "json", "sql"};
-            S().exportMenuOpen = false;
-            if (idx >= 0 && idx < 4) {
-                heibu::exportAs(fmts[idx]);
-            }
-        })
-        .onOpenChange([](bool open) { S().exportMenuOpen = open; })
-        .build();
+    const std::vector<GlassMenuItem> glassItems = {
+        {"CSV (.csv)", false}, {"TSV (.tsv)", false},
+        {"JSON (.json)", false}, {"SQL INSERT (.sql)", false},
+    };
+    composeGlassMenu(ui, "export.menu", w, h, S().exportMenuX, my,
+                     140.0f, itemH, 113, glassItems, t,
+                     [] {
+                         S().exportMenuOpen = false;
+                         app::requestUpdate();
+                     },
+                     [](int idx) {
+                         const char* fmts[] = {"csv", "tsv", "json", "sql"};
+                         if (idx >= 0 && idx < 4) {
+                             heibu::exportAs(fmts[idx]);
+                         }
+                     });
 }
 
 // 全局 toast：右下角弹出，3 秒自动消失（导出成功/失败等反馈）。
@@ -678,6 +643,7 @@ inline void composeToast(eui::Ui& ui, float w, float h, const components::theme:
         .title(S().toastTitle)
         .message(S().toastMessage)
         .theme(t)
+        .style(toastGlassStyle(t))
         .zIndex(120)
         .duration(3.0f)
         .onDismiss([] { S().toastVisible = false; })
@@ -690,14 +656,10 @@ inline void composeShell(eui::Ui& ui, const eui::Screen& screen) {
     const float w = screen.width;
     const float h = screen.height;
 
-    // 根背景（clearColor 初始化固化，运行时主题切换需 compose 重绘）。
-    ui.rect("root.bg").position(0.0f, 0.0f).size(w, h).color(t.background);
+    // 根背景渐变（clearColor 初始化固化，运行时主题切换需 compose 重绘）。
+    ui.rect("root.bg").position(0.0f, 0.0f).size(w, h).gradient(rootGradient(t));
 
     composeSidebar(ui, w, h, t);
-    if (S().redisSidebarVisible) {
-        composeRedisSidebar(ui, kIslandGap + kSidebarW + kIslandGap, kIslandGap,
-                            kRedisSidebarW, h - kIslandGap * 2.0f, t);
-    }
     composeContent(ui, w, h, t);
     composeConnDialog(ui, w, h, t);
     composeDeleteConfirm(ui, w, h, t);

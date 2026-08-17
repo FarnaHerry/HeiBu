@@ -7,6 +7,7 @@ import std;
 import heibu.app_state;
 import heibu.i18n;
 import heibu.os_theme;
+import heibu.ui.theme;
 
 export namespace heibu::ui {
 
@@ -45,6 +46,7 @@ inline void composeSettings(eui::Ui& ui, float x, float y, float w, float h,
             .fontSize(12.0f)
             .theme(t, active)
             .radius(7.0f)
+            .textColor(buttonTextColor(t, active))
             .onClick([mode = themes[i].mode] {
                 heibu::setThemeMode(mode);
                 app::requestUpdate();
@@ -75,6 +77,7 @@ inline void composeSettings(eui::Ui& ui, float x, float y, float w, float h,
             .fontSize(12.0f)
             .theme(t, active)
             .radius(7.0f)
+            .textColor(buttonTextColor(t, active))
             .onClick([loc = langs[i].loc] {
                 S().locale = loc;
                 app::requestUpdate();

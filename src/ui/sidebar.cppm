@@ -55,6 +55,26 @@ inline bool typeSupported(Dialect dialect, const std::string& type) {
     return type == "table" || type == "view" || type == "trigger";
 }
 
+// 对象/分类行的 Font Awesome 图标码点（随主题色的图标文字）。
+inline unsigned int objectIcon(const std::string& type) {
+    if (type == "table") {
+        return 0xF0CEu;    // fa-table
+    }
+    if (type == "view") {
+        return 0xF06Eu;    // fa-eye
+    }
+    if (type == "procedure") {
+        return 0xF013u;    // fa-cog
+    }
+    if (type == "function") {
+        return 0xF1B2u;    // fa-cube
+    }
+    if (type == "trigger") {
+        return 0xF0E7u;    // fa-bolt
+    }
+    return 0u;
+}
+
 inline void composeSidebar(eui::Ui& ui, float w, float h, const components::theme::ThemeColorTokens& t) {
     const float x = kIslandGap;
     const float y = kIslandGap;
@@ -213,7 +233,7 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                                         }
                                     }
                                     if (isRedis) {
-                                        heibu::openRedisDb(connId, db);   // 打开二级侧边栏键树
+                                        heibu::openRedisDb(connId, db);   // 打开 Redis 库标签（树+值同框）
                                     } else {
                                         heibu::toggleDatabase(connId, db);
                                     }
@@ -228,7 +248,8 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                                     S().ctxY = static_cast<float>(e.y);
                                     S().ctxMenuOpen = true;
                                     app::requestUpdate();
-                                });
+                                },
+                                {}, 0xF1C0u);   // fa-database
             } else if (r.kind == SidebarRow::Kind::Category) {
                 drawSidebarItem(ui, "cat." + r.connId + "." + r.database + "." + r.type,
                                 32.0f, 0.0f, w2 - 32.0f, h2, r.label, false, theme,
@@ -236,7 +257,9 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                                     heibu::selectSidebar(SidebarSelection::Kind::Category, connId, db, "", type);
                                     heibu::toggleCategory(connId, db, type);
                                 },
-                                r.expanded ? "▾ " : "▸ ", nullptr);
+                                r.expanded ? "▾ " : "▸ ", nullptr,
+                                {},   // iconColor
+                                objectIcon(r.type));
             } else {
                 drawSidebarItem(ui, "obj." + r.connId + "." + r.database + "." + r.name,
                                 48.0f, 0.0f, w2 - 48.0f, h2, r.label, false, theme,
@@ -262,7 +285,9 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
                                     S().ctxY = static_cast<float>(e.y);
                                     S().ctxMenuOpen = true;
                                     app::requestUpdate();
-                                });
+                                },
+                                {},   // iconColor：对象行不画圆点
+                                objectIcon(r.type));
             }
         })
         .build();
@@ -277,6 +302,7 @@ inline void composeSidebar(eui::Ui& ui, float w, float h, const components::them
         .position(x + pad, y + sh - 40.0f).size(innerW, 30.0f)
         .text("＋ " + std::string(L(StrId::NewConnection)))
         .fontSize(12.0f).theme(t, true).radius(8.0f)
+        .textColor(onPrimaryText(t))
         .onClick([] { heibu::openConnDialog(); })
         .build();
 }

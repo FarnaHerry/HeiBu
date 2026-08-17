@@ -52,7 +52,7 @@ const DslAppConfig& dslAppConfig() {
     static const DslAppConfig config = DslAppConfig{}
         .title("黑簿 Heibu")
         .pageId("heibu")
-        .clearColor({0.075f, 0.085f, 0.105f, 1.0f})
+        .clearColor({0.04f, 0.04f, 0.05f, 1.0f})   // 极客黑，避免启动首帧露旧蓝灰
         // 原生全局缩放（eui-neo 0.5.6）：uiScale 按 dpiScale*uiScale 放大整个逻辑坐标系。
         // 所有尺寸按设计逻辑像素书写；窗口物理尺寸 = 设计尺寸 × kUI。
         .uiScale(heibu::ui::kUI)
