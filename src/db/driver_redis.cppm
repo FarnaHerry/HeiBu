@@ -294,16 +294,14 @@ public:
                 }
                 freeReplyObject(r);
             }
-            std::vector<std::string> args = {"HSET", key};
+            // 逐字段 HSET：Redis 4.0 前的多字段 HSET 语法不可用，单字段最通用。
             for (const RedisEntry& e : v.entries) {
-                args.push_back(e.name);
-                args.push_back(e.value);
+                redisReply* r = commandArgv({"HSET", key, e.name, e.value}, error);
+                if (!r) {
+                    return false;
+                }
+                freeReplyObject(r);
             }
-            redisReply* r = commandArgv(args, error);
-            if (!r) {
-                return false;
-            }
-            freeReplyObject(r);
         } else {
             error = "暂不支持写入该类型: " + v.type;
             return false;
@@ -327,7 +325,7 @@ public:
     }
 
     bool run(const BoundStatement& stmt, ResultGrid& out, std::int64_t rowCap,
-             std::string& error, CancelCheck) override {
+             std::string& error, CancelCheck = {}) override {
         std::lock_guard<std::mutex> lock(mutex_);
         if (!ctx_) {
             error = "not connected";
