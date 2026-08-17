@@ -22,4 +22,5 @@ include_dirs = ["src"]
 # 不必等整个模块编译完。C++23 模块项目收益明显。
 bmi_schedule = "on"
 # GetSaveFileNameW 在 comdlg32.dll（src/store/save_dialog.h）。
-ldflags = ["-lcomdlg32"]
+# Windows GUI 子系统 + 入口 mainCRTStartup：不弹控制台黑窗，同时保留标准 int main()。
+ldflags = ["-lcomdlg32", "-Wl,-subsystem:windows", "-Wl,-entry:mainCRTStartup"]
